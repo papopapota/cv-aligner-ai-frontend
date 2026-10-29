@@ -17,6 +17,15 @@ La base actual contiene el bootstrap de Next.js, Tailwind CSS v4 y componentes d
 | Jest + React Testing Library | Pendiente de instalación y configuración |
 | Variable `NEXT_PUBLIC_API_URL` | Pendiente de incorporación |
 
+## Inicio rápido
+
+```bash
+pnpm install
+pnpm dev
+```
+
+El servidor de desarrollo estará disponible en [http://localhost:3000](http://localhost:3000).
+
 ## Stack tecnológico
 
 Versiones verificadas en el entorno de desarrollo actual.
