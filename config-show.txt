@@ -1,0 +1,84 @@
+{
+    "compilerOptions": {
+        "target": "es2017",
+        "lib": [
+            "dom",
+            "dom.iterable",
+            "esnext"
+        ],
+        "allowJs": true,
+        "skipLibCheck": true,
+        "strict": true,
+        "noEmit": true,
+        "esModuleInterop": true,
+        "module": "esnext",
+        "moduleResolution": "bundler",
+        "resolveJsonModule": true,
+        "isolatedModules": true,
+        "jsx": "react-jsx",
+        "incremental": true,
+        "plugins": [
+            {
+                "name": "next"
+            }
+        ],
+        "baseUrl": "./",
+        "paths": {
+            "@/*": [
+                "./src/*"
+            ]
+        },
+        "allowSyntheticDefaultImports": true,
+        "resolvePackageJsonExports": true,
+        "resolvePackageJsonImports": true,
+        "preserveConstEnums": true,
+        "noImplicitAny": true,
+        "noImplicitThis": true,
+        "strictNullChecks": true,
+        "strictFunctionTypes": true,
+        "strictBindCallApply": true,
+        "strictPropertyInitialization": true,
+        "strictBuiltinIteratorReturn": true,
+        "alwaysStrict": true,
+        "useUnknownInCatchVariables": true
+    },
+    "files": [
+        "./next-env.d.ts",
+        "./src/features/auth-by-email/index.ts",
+        "./src/features/auth-by-email/api/auth.ts",
+        "./src/features/auth-by-email/model/validate-email.ts",
+        "./src/lib/utils.ts",
+        "./src/shared/api/query-client.ts",
+        "./src/app/layout.tsx",
+        "./src/app/page.tsx",
+        "./src/components/ui/badge.tsx",
+        "./src/components/ui/button.tsx",
+        "./src/components/ui/card.tsx",
+        "./src/components/ui/input.tsx",
+        "./src/components/ui/progress.tsx",
+        "./src/components/ui/toast.tsx",
+        "./src/features/auth-by-email/ui/login-form.tsx",
+        "./src/features/auth-by-email/ui/register-form.tsx",
+        "./src/shared/ui/badge.tsx",
+        "./src/shared/ui/button.tsx",
+        "./src/shared/ui/card.tsx",
+        "./src/shared/ui/input.tsx",
+        "./src/shared/ui/progress.tsx",
+        "./src/shared/ui/toast.tsx",
+        "./.next/types/cache-life.d.ts",
+        "./.next/types/root-params.d.ts",
+        "./.next/types/routes.d.ts",
+        "./.next/types/validator.ts"
+    ],
+    "include": [
+        "next-env.d.ts",
+        "src/**/*.ts",
+        "src/**/*.tsx",
+        ".next/types/**/*.ts",
+        ".next/dev/types/**/*.ts",
+        "**/*.mts"
+    ],
+    "exclude": [
+        "node_modules"
+    ]
+}
