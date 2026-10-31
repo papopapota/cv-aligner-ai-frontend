@@ -1,13 +1,24 @@
-
 import type { Metadata } from "next";
-import { Geist, Geist_Mono } from "next/font/google";
+import { ADLaM_Display, Fascinate, Fauna_One, Geist_Mono } from "next/font/google";
 import "./globals.css";
-
 import { Providers } from "./providers";
 
-const geistSans = Geist({
-  variable: "--font-geist-sans",
+const faunaOne = Fauna_One({
+  weight: "400",
   subsets: ["latin"],
+  variable: "--font-fauna-one",
+});
+
+const adlamDisplay = ADLaM_Display({
+  weight: "400",
+  subsets: ["latin"],
+  variable: "--font-adlam-display",
+});
+
+const fascinate = Fascinate({
+  weight: "400",
+  subsets: ["latin"],
+  variable: "--font-fascinate",
 });
 
 const geistMono = Geist_Mono({
@@ -17,18 +28,20 @@ const geistMono = Geist_Mono({
 
 export const metadata: Metadata = {
   title: "CV Aligner AI",
-  description: "Sistema inteligente de optimización de currículums",
+  description: "Optimiza tu CV y da seguimiento a tus postulaciones.",
 };
 
 export default function RootLayout({
   children,
-}: Readonly<{ children: React.ReactNode }>) {
+}: Readonly<{
+  children: React.ReactNode;
+}>) {
   return (
     <html
       lang="es"
-      className={`${geistSans.variable} ${geistMono.variable} h-full antialiased`}
+      className={`${faunaOne.variable} ${adlamDisplay.variable} ${fascinate.variable} ${geistMono.variable}`}
     >
-      <body className="min-h-full flex flex-col">
+      <body className="min-h-dvh bg-background text-foreground antialiased">
         <Providers>{children}</Providers>
       </body>
     </html>

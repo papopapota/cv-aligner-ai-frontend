@@ -1,30 +1,36 @@
 "use client";
 
+import Link from "next/link";
+import { useRouter } from "next/navigation";
 import { useState } from "react";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
-import { useRouter } from "next/navigation";
+import { CircleAlert } from "lucide-react";
 
-import { Input } from "@/shared/ui/input";
-import { Button } from "@/shared/ui/button";
-
+import { useLoginMutation } from "@/features/auth-by-email/api";
 import {
   loginSchema,
   type LoginFormData,
 } from "@/features/auth-by-email/model";
-
-import { useLoginMutation } from "@/features/auth-by-email/api";
+import {
+  Alert,
+  AlertDescription,
+  AlertTitle,
+  Button,
+  FormField,
+  Input,
+  Spinner,
+} from "@/shared/ui";
 
 export function LoginForm() {
-  const [isLoading, setIsLoading] = useState(false);
   const router = useRouter();
-
-  // Ejecutar el hook en el nivel superior del componente
   const mutation = useLoginMutation();
+  const [submitError, setSubmitError] = useState<string | null>(null);
 
   const {
     register,
     handleSubmit,
+    formState: { errors },
   } = useForm<LoginFormData>({
     resolver: zodResolver(loginSchema),
     defaultValues: {
@@ -34,51 +40,88 @@ export function LoginForm() {
   });
 
   const onSubmit = async (data: LoginFormData) => {
-  setIsLoading(true);
+    setSubmitError(null);
 
-  try {
-    const response = await mutation.mutateAsync(data);
-
-    // Guardar temporalmente el token para las siguientes peticiones
-    sessionStorage.setItem("access_token", response.access_token);
-
-    router.push("/dashboard");
-  } catch (error) {
-    console.error(error);
-    alert(
-      error instanceof Error
-        ? error.message
-        : "Error al iniciar sesión"
-    );
-  } finally {
-    setIsLoading(false);
-  }
-};
+    try {
+      await mutation.mutateAsync(data);
+      router.push("/upload");
+    } catch (error) {
+      setSubmitError(
+        error instanceof Error ? error.message : "No se pudo iniciar sesión."
+      );
+    }
+  };
 
   return (
     <form
       onSubmit={handleSubmit(onSubmit)}
-      className="max-w-md space-y-4"
+      noValidate
+      className="flex flex-col gap-6"
     >
-      <h2 className="text-2xl font-semibold">
-        Iniciar sesión
-      </h2>
+      {submitError ? (
+        <Alert variant="destructive">
+          <CircleAlert aria-hidden="true" />
+          <AlertTitle>No se pudo iniciar sesión</AlertTitle>
+          <AlertDescription>{submitError}</AlertDescription>
+        </Alert>
+      ) : null}
 
-      <Input
-        type="email"
-        placeholder="Correo electrónico"
-        {...register("email")}
-      />
+      <div className="flex flex-col gap-4">
+        <FormField
+          id="login-email"
+          label="Correo electrónico"
+          error={errors.email?.message}
+        >
+          <Input
+            id="login-email"
+            type="email"
+            autoComplete="email"
+            placeholder="tu@email.com"
+            aria-invalid={Boolean(errors.email)}
+            aria-describedby={errors.email ? "login-email-error" : undefined}
+            {...register("email")}
+          />
+        </FormField>
 
-      <Input
-        type="password"
-        placeholder="Contraseña"
-        {...register("password")}
-      />
+        <FormField
+          id="login-password"
+          label="Contraseña"
+          error={errors.password?.message}
+        >
+          <Input
+            id="login-password"
+            type="password"
+            autoComplete="current-password"
+            placeholder="Mínimo 6 caracteres"
+            aria-invalid={Boolean(errors.password)}
+            aria-describedby={
+              errors.password ? "login-password-error" : undefined
+            }
+            {...register("password")}
+          />
+        </FormField>
+      </div>
 
-      <Button type="submit" disabled={isLoading}>
-        {isLoading ? "Iniciando sesión..." : "Entrar"}
+      <Button type="submit" size="lg" disabled={mutation.isPending}>
+        {mutation.isPending ? (
+          <>
+            <Spinner />
+            Iniciando sesión...
+          </>
+        ) : (
+          "Iniciar sesión"
+        )}
       </Button>
+
+      <p className="text-center text-sm text-muted-foreground">
+        ¿Aún no tienes cuenta?{" "}
+        <Link
+          href="/register"
+          className="text-primary underline-offset-4 hover:underline"
+        >
+          Crear una cuenta
+        </Link>
+      </p>
     </form>
   );
 }
