@@ -1,15 +1,11 @@
-import { createMutation } from '@/shared/api/query-client';
-
-export function useLoginMutation() {
-  return createMutation({
-    url: '/auth/login',
-    method: 'POST',
-  });
-}
-
-export function useRegisterMutation() {
-  return createMutation({
-    url: '/auth/register',
-    method: 'POST',
-  });
-}
+export {
+  loginResponseSchema,
+  registerResponseSchema,
+  useLoginMutation,
+  useRegisterMutation,
+} from "./auth";
+export type {
+  LoginResponse,
+  RegisterPayload,
+  RegisterResponse,
+} from "./auth";
