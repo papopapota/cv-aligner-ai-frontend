@@ -3,6 +3,8 @@
 import { useMutation } from "@tanstack/react-query";
 import type { z } from "zod";
 
+import { API_URL, defaultToken, readErrorMessage } from "./http";
+
 export interface MutationOptions<TData> {
   url: string;
   schema: z.ZodType<TData>;
@@ -10,39 +12,6 @@ export interface MutationOptions<TData> {
   onSuccess?: (data: TData) => void;
   onError?: (error: Error) => void;
   getToken?: () => string | null;
-}
-
-const API_URL = process.env.NEXT_PUBLIC_API_URL || "http://localhost:8000";
-
-function isRecord(value: unknown): value is Record<string, unknown> {
-  return typeof value === "object" && value !== null;
-}
-
-async function readErrorMessage(response: Response): Promise<string> {
-  const payload: unknown = await response.json().catch(() => null);
-
-  if (isRecord(payload)) {
-    const detail = payload.detail;
-    const message = payload.message;
-
-    if (typeof detail === "string" && detail.length > 0) {
-      return detail;
-    }
-
-    if (typeof message === "string" && message.length > 0) {
-      return message;
-    }
-  }
-
-  return `Error HTTP ${response.status}`;
-}
-
-function defaultToken(): string | null {
-  if (typeof window === "undefined") {
-    return null;
-  }
-
-  return window.sessionStorage.getItem("access_token");
 }
 
 async function executeMutation<TData>(

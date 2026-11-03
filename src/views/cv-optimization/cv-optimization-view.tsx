@@ -1,23 +1,22 @@
 import Link from "next/link"
 
-import { sampleAtsReport } from "@/entities/ats-report"
 import {
   Badge,
   buttonVariants,
   PageHeader,
 } from "@/shared/ui"
-import { AtsScoreDashboard } from "@/widgets/ats-score-dashboard"
+import { OptimizationResult } from "@/widgets/optimization-result"
 
 export function CvOptimizationView() {
   return (
     <div className="flex flex-col gap-8">
       <PageHeader
-        title="Diagnóstico ATS Score"
-        description="Revisa la compatibilidad de tu CV con la vacante y aplica las recomendaciones prioritarias."
-        actions={<Badge variant="outline">Análisis completado</Badge>}
+        title="CV Optimizado"
+        description="Revisa el contenido generado y la mejora en la varianza respecto a tu CV original."
+        actions={<Badge variant="outline">Resultado del análisis</Badge>}
       />
 
-      <AtsScoreDashboard report={sampleAtsReport} />
+      <OptimizationResult />
 
       <div className="flex flex-col gap-4 border-t border-line pt-6 sm:flex-row sm:items-center sm:justify-between">
         <Link
