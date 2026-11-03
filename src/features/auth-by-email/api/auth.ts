@@ -1,6 +1,6 @@
 import { z } from "zod";
 
-import { useCreateMutation } from "@/shared/api/query-client";
+import { useCreateMutation } from "@/shared/api";
 import type { LoginFormData, RegisterFormData } from "../model";
 
 export const loginResponseSchema = z.object({

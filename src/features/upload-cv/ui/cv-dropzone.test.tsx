@@ -2,12 +2,13 @@ import { fireEvent, render, screen, waitFor } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { describe, expect, jest } from "@jest/globals";
 
+import type { CvUpload } from "../model/validate-file";
 import { CvDropzone } from "./cv-dropzone";
 
 describe("CvDropzone", () => {
   it("acepta un PDF válido y notifica el archivo", async () => {
     const user = userEvent.setup();
-    const onChange = jest.fn();
+    const onChange = jest.fn<(upload: CvUpload) => void>();
     const onRemove = jest.fn();
 
     render(<CvDropzone file={null} onChange={onChange} onRemove={onRemove} />);
@@ -20,7 +21,9 @@ describe("CvDropzone", () => {
 
     await waitFor(() => {
       expect(onChange).toHaveBeenCalledTimes(1);
-      expect(onChange.mock.calls[0][0].name).toBe("cv.pdf");
+      expect(onChange.mock.calls[0][0].file).toBeInstanceOf(File);
+      expect(onChange.mock.calls[0][0].file.name).toBe("cv.pdf");
+      expect(onChange.mock.calls[0][0].metadata.name).toBe("cv.pdf");
     });
   });
 

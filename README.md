@@ -12,10 +12,10 @@ La base actual contiene el bootstrap de Next.js, Tailwind CSS v4 y componentes d
 | --- | --- |
 | Next.js App Router, TypeScript y Tailwind CSS v4 | Implementado |
 | Componentes shadcn/ui (Base UI + Lucide) | Implementado en `src/components/ui/` |
-| Capas FSD (`views`, `widgets`, `features`, `entities`, `shared`) | Pendiente de migración |
-| Integración con la API REST | Pendiente |
-| Jest + React Testing Library | Pendiente de instalación y configuración |
-| Variable `NEXT_PUBLIC_API_URL` | Pendiente de incorporación |
+| Capas FSD (`views`, `widgets`, `features`, `entities`, `shared`) | Implementado |
+| Integración con la API REST | Parcial: autenticación y optimización de CV |
+| Jest + React Testing Library | Implementado |
+| Variable `NEXT_PUBLIC_BACKEND_URL` | Implementada |
 
 ## Inicio rápido
 
@@ -152,19 +152,21 @@ features/upload-cv/
 
 Las llamadas de red deben aislarse mockeando los clientes de `shared/api/` o los handlers de Next.js. No se deben realizar peticiones reales durante las pruebas.
 
-> **Estado actual:** Jest, React Testing Library ni los scripts `test:*` están instalados. Mientras no se incorpore el tooling, `pnpm test` no existe. La configuración objetivo es `next/jest` con `jest-environment-jsdom`, `@testing-library/react`, `@testing-library/jest-dom` y `@testing-library/user-event`. Ten en cuenta que Jest no soporta Server Components asíncronos; para esos casos se recomienda una prueba E2E.
+> **Estado actual:** Jest, React Testing Library y `jest-environment-jsdom` están configurados. La suite se ejecuta con `pnpm test`. Ten en cuenta que Jest no soporta Server Components asíncronos; para esos casos se recomienda una prueba E2E.
 
 ## Variables de entorno
 
 | Variable | Requerida | Ámbito | Ejemplo | Estado |
 | --- | --- | --- | --- | --- |
-| `NEXT_PUBLIC_API_URL` | Sí, al integrar la API | Cliente y servidor | `http://localhost:8000` | Pendiente; aún no se referencia en el código |
+| `NEXT_PUBLIC_BACKEND_URL` | Sí | Cliente y servidor | `http://127.0.0.1:8000` | Implementada |
 
-Crea un archivo `.env.local` en la raíz del repositorio:
+Crea un archivo `.env` en la raíz del repositorio:
 
 ```bash
-NEXT_PUBLIC_API_URL=http://localhost:8000
+NEXT_PUBLIC_BACKEND_URL=http://127.0.0.1:8000
 ```
+
+El cliente centraliza la URL base en `src/shared/api/http.ts` y la usa para `/auth/*` y `/cv/optimize`.
 
 Los archivos `.env*` están ignorados por Git. No incluyas secretos en variables con prefijo `NEXT_PUBLIC_`, ya que su valor se incorpora al bundle del navegador.
 
@@ -176,9 +178,9 @@ Los archivos `.env*` están ignorados por Git. No incluyas secretos en variables
 | `pnpm build` | Genera el build de producción. | Disponible |
 | `pnpm start` | Sirve el build de producción. | Disponible |
 | `pnpm lint` | Ejecuta ESLint. | Disponible |
-| `pnpm test` | Ejecuta la suite de pruebas una vez. | Pendiente |
-| `pnpm test:watch` | Ejecuta las pruebas en modo watch. | Pendiente |
-| `pnpm test:coverage` | Ejecuta las pruebas con reporte de cobertura. | Pendiente |
+| `pnpm test` | Ejecuta la suite de pruebas una vez. | Disponible |
+| `pnpm test:watch` | Ejecuta las pruebas en modo watch. | Disponible |
+| `pnpm test:coverage` | Ejecuta las pruebas con reporte de cobertura. | No configurado |
 
 Mientras no exista un script dedicado de type-check, se puede validar TypeScript con:
 
@@ -204,7 +206,7 @@ pnpm dev
 
 La aplicación estará disponible en [http://localhost:3000](http://localhost:3000).
 
-Para conectar el frontend con el backend, crea `.env.local` con `NEXT_PUBLIC_API_URL` apuntando a la API REST de `cv-aligner-ai-backend`.
+Para conectar el frontend con el backend, crea `.env` con `NEXT_PUBLIC_BACKEND_URL` apuntando a la API REST de `cv-aligner-ai-backend`.
 
 ### Verificación
 
