@@ -1,10 +1,11 @@
-const fetchMock = globalThis.fetch as unknown as jest.Mock;
+const fetchMock = globalThis.fetch as unknown as jest.MockedFunction<typeof fetch>;
 
 import React from "react";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { fireEvent, render, screen, waitFor } from "@testing-library/react";
 import { describe, expect, jest } from "@jest/globals";
 
+import { API_URL } from "@/shared/api";
 import { LoginForm } from "./login-form";
 
 const queryClient = new QueryClient();
@@ -38,9 +39,9 @@ describe("LoginForm", () => {
     const response = {
       ok: true,
       status: 200,
-      json: jest.fn().mockResolvedValue({ access_token: "token-prueba" }),
+      json: jest.fn(async () => ({ access_token: "token-prueba" })),
     };
-    fetchMock.mockResolvedValue(response);
+    fetchMock.mockResolvedValue(response as unknown as Response);
 
     render(<LoginForm />, { wrapper });
 
@@ -55,7 +56,7 @@ describe("LoginForm", () => {
 
     await waitFor(() => {
       expect(fetchMock).toHaveBeenCalledWith(
-        "http://localhost:8000/auth/login",
+        `${API_URL}/auth/login`,
         expect.objectContaining({
           method: "POST",
           headers: { "Content-Type": "application/json" },
