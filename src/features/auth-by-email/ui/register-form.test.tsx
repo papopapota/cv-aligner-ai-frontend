@@ -4,6 +4,7 @@ import React from "react";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { fireEvent, render, screen, waitFor } from "@testing-library/react";
 
+import { API_URL } from "@/shared/api";
 import { RegisterForm } from "./register-form";
 
 const queryClient = new QueryClient();
@@ -49,7 +50,7 @@ describe("RegisterForm", () => {
     const response = {
       ok: true,
       status: 200,
-      json: jest.fn().mockResolvedValue({ id: "user-1", email: "ana@email.com" }),
+      json: jest.fn(async () => ({ id: "user-1", email: "ana@email.com" })),
     };
     fetchMock.mockResolvedValue(response as unknown as Response);
 
@@ -72,7 +73,7 @@ describe("RegisterForm", () => {
 
     await waitFor(() => {
       expect(fetchMock).toHaveBeenCalledWith(
-        "http://localhost:8000/auth/register",
+        `${API_URL}/auth/register`,
         expect.objectContaining({
           method: "POST",
           headers: { "Content-Type": "application/json" },

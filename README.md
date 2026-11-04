@@ -152,19 +152,21 @@ features/upload-cv/
 
 Las llamadas de red deben aislarse mockeando los clientes de `shared/api/` o los handlers de Next.js. No se deben realizar peticiones reales durante las pruebas.
 
-> **Estado actual:** Jest y React Testing Library están configurados (`jest.config.ts`, `jest.setup.tsx` y los scripts `test:*` de `package.json`). Las pruebas se ejecutan con `pnpm test` y las llamadas de red se mockean sobre `globalThis.fetch`.
+> **Estado actual:** Jest y React Testing Library están configurados (`jest.config.ts`, `jest.setup.tsx` y los scripts `test:*` de `package.json`). La suite se ejecuta con `pnpm test` y las llamadas de red se mockean sobre `globalThis.fetch`. Ten en cuenta que Jest no soporta Server Components asíncronos; para esos casos se recomienda una prueba E2E.
 
 ## Variables de entorno
 
 | Variable | Requerida | Ámbito | Ejemplo | Estado |
 | --- | --- | --- | --- | --- |
-| `NEXT_PUBLIC_API_URL` | Sí, al integrar la API | Cliente y servidor | `http://localhost:8000` | Usada por `shared/api/query-client.ts`; si falta, cae a `http://localhost:8000` |
+| `NEXT_PUBLIC_BACKEND_URL` | Sí | Cliente y servidor | `http://127.0.0.1:8000` | Implementada |
 
-Crea un archivo `.env.local` en la raíz del repositorio:
+Crea un archivo `.env` en la raíz del repositorio:
 
 ```bash
-NEXT_PUBLIC_API_URL=http://localhost:8000
+NEXT_PUBLIC_BACKEND_URL=http://127.0.0.1:8000
 ```
+
+El cliente centraliza la URL base en `src/shared/api/http.ts` y la usa para `/auth/*` y `/cv/optimize`.
 
 Los archivos `.env*` están ignorados por Git. No incluyas secretos en variables con prefijo `NEXT_PUBLIC_`, ya que su valor se incorpora al bundle del navegador.
 
@@ -195,7 +197,7 @@ Los estados válidos son `pending`, `under-review`, `accepted` y `rejected`. Un 
 | `pnpm lint` | Ejecuta ESLint. | Disponible |
 | `pnpm test` | Ejecuta la suite de pruebas una vez. | Disponible |
 | `pnpm test:watch` | Ejecuta las pruebas en modo watch. | Disponible |
-| `pnpm test:coverage` | Ejecuta las pruebas con reporte de cobertura. | Pendiente |
+| `pnpm test:coverage` | Ejecuta las pruebas con reporte de cobertura. | No configurado |
 
 Mientras no exista un script dedicado de type-check, se puede validar TypeScript con:
 
@@ -221,7 +223,7 @@ pnpm dev
 
 La aplicación estará disponible en [http://localhost:3000](http://localhost:3000).
 
-Para conectar el frontend con el backend, crea `.env.local` con `NEXT_PUBLIC_API_URL` apuntando a la API REST de `cv-aligner-ai-backend`.
+Para conectar el frontend con el backend, crea `.env` con `NEXT_PUBLIC_BACKEND_URL` apuntando a la API REST de `cv-aligner-ai-backend`.
 
 ### Verificación
 

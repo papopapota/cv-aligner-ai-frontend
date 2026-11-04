@@ -11,14 +11,15 @@ import {
 import { Button } from "@/shared/ui"
 import { cn } from "cn"
 import {
-  createCvFile,
+  createCvUpload,
   formatFileSize,
   validateCvFile,
+  type CvUpload,
 } from "../model/validate-file"
 
 interface CvDropzoneProps {
   file: CvFile | null
-  onChange: (file: CvFile) => void
+  onChange: (upload: CvUpload) => void
   onRemove: () => void
   error?: string
 }
@@ -42,7 +43,7 @@ export function CvDropzone({ file, onChange, onRemove, error }: CvDropzoneProps)
       }
 
       setLocalError(null)
-      onChange(createCvFile(nextFile))
+      onChange(createCvUpload(nextFile))
     },
     [onChange]
   )

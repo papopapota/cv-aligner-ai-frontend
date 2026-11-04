@@ -49,6 +49,18 @@ export function createCvFile(file: File): CvFile {
   }
 }
 
+export interface CvUpload {
+  file: File
+  metadata: CvFile
+}
+
+export function createCvUpload(file: File): CvUpload {
+  return {
+    file,
+    metadata: createCvFile(file),
+  }
+}
+
 export function formatFileSize(bytes: number): string {
   if (bytes < 1024) {
     return `${bytes} B`
