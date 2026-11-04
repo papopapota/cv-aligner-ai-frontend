@@ -10,6 +10,7 @@ import { BrandMark } from "./brand-mark"
 const navigation = [
   { href: "/upload", label: "Cargar documentos" },
   { href: "/analysis", label: "Diagnóstico ATS" },
+  { href: "/applications", label: "Mis Postulaciones" }
 ]
 
 function AppHeader({ className }: { className?: string }) {

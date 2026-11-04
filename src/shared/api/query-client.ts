@@ -1,18 +1,70 @@
 "use client";
 
-import { useMutation } from "@tanstack/react-query";
+import { useMutation, useQuery } from "@tanstack/react-query";
+import type { QueryKey } from "@tanstack/react-query";
 import type { z } from "zod";
+
+export type HttpMethod = "GET" | "POST" | "PUT" | "PATCH" | "DELETE";
+
+export type QueryParams = Record<
+  string,
+  string | number | boolean | null | undefined
+>;
+
+export class ApiError extends Error {
+  readonly status: number;
+
+  constructor(message: string, status: number) {
+    super(message);
+    this.name = "ApiError";
+    this.status = status;
+  }
+}
 
 export interface MutationOptions<TData> {
   url: string;
-  schema: z.ZodType<TData>;
-  method?: "GET" | "POST" | "PUT" | "PATCH" | "DELETE";
+  schema?: z.ZodType<TData>;
+  method?: HttpMethod;
   onSuccess?: (data: TData) => void;
   onError?: (error: Error) => void;
   getToken?: () => string | null;
 }
 
+export interface ApiMutationOptions<TVariables, TData, TResult = TData> {
+  url: string | ((variables: TVariables) => string);
+  schema?: z.ZodType<TData>;
+  method?: HttpMethod;
+  buildBody?: (variables: TVariables) => unknown;
+  transform?: (data: TData) => TResult;
+  onSuccess?: (data: TResult, variables: TVariables) => void | Promise<void>;
+  onError?: (error: Error) => void;
+  getToken?: () => string | null;
+}
+
+export interface ApiQueryOptions<TData, TSelected = TData> {
+  url: string;
+  schema: z.ZodType<TData>;
+  params?: QueryParams;
+  queryKey?: QueryKey;
+  select?: (data: TData) => TSelected;
+  enabled?: boolean;
+  getToken?: () => string | null;
+}
+
 const API_URL = process.env.NEXT_PUBLIC_API_URL || "http://localhost:8000";
+
+export function buildUrl(url: string, params?: QueryParams): string {
+  const search = new URLSearchParams();
+
+  for (const [key, value] of Object.entries(params ?? {})) {
+    if (value !== undefined && value !== null) {
+      search.set(key, String(value));
+    }
+  }
+
+  const query = search.toString();
+  return `${API_URL}${url}${query ? `?${query}` : ""}`;
+}
 
 function isRecord(value: unknown): value is Record<string, unknown> {
   return typeof value === "object" && value !== null;
@@ -45,12 +97,23 @@ function defaultToken(): string | null {
   return window.sessionStorage.getItem("access_token");
 }
 
-async function executeMutation<TData>(
+interface RequestOptions<TData> {
+  method: HttpMethod;
+  schema?: z.ZodType<TData>;
+  params?: QueryParams;
+  body?: unknown;
+  getToken?: () => string | null;
+}
+
+async function request<TData>(
   url: string,
-  method: NonNullable<MutationOptions<TData>["method"]>,
-  variables: unknown,
-  schema: z.ZodType<TData>,
-  getToken: () => string | null
+  {
+    method,
+    schema,
+    params,
+    body,
+    getToken = defaultToken,
+  }: RequestOptions<TData>
 ): Promise<TData> {
   const token = getToken();
   const headers: HeadersInit = {
@@ -61,17 +124,26 @@ async function executeMutation<TData>(
     headers.Authorization = `Bearer ${token}`;
   }
 
-  const response = await fetch(`${API_URL}${url}`, {
+  const response = await fetch(buildUrl(url, params), {
     method,
     headers,
-    body: method === "GET" ? undefined : JSON.stringify(variables),
+    body: body === undefined ? undefined : JSON.stringify(body),
   });
 
   if (!response.ok) {
-    throw new Error(await readErrorMessage(response));
+    throw new ApiError(await readErrorMessage(response), response.status);
+  }
+
+  if (response.status === 204) {
+    return undefined as TData;
   }
 
   const payload: unknown = await response.json();
+
+  if (!schema) {
+    return payload as TData;
+  }
+
   const parsed = schema.safeParse(payload);
 
   if (!parsed.success) {
@@ -79,6 +151,52 @@ async function executeMutation<TData>(
   }
 
   return parsed.data;
+}
+
+export function useApiQuery<TData, TSelected = TData>({
+  url,
+  schema,
+  params,
+  queryKey,
+  select,
+  enabled = true,
+  getToken = defaultToken,
+}: ApiQueryOptions<TData, TSelected>) {
+  return useQuery<TData, Error, TSelected>({
+    queryKey: queryKey ?? [url, params ?? null],
+    queryFn: () => request(url, { method: "GET", schema, params, getToken }),
+    select,
+    enabled,
+  });
+}
+
+export function useApiMutation<TVariables, TData, TResult = TData>({
+  url,
+  schema,
+  method = "POST",
+  buildBody,
+  transform,
+  onSuccess,
+  onError,
+  getToken = defaultToken,
+}: ApiMutationOptions<TVariables, TData, TResult>) {
+  return useMutation<TResult, Error, TVariables>({
+    mutationFn: async (variables) => {
+      const data = await request(
+        typeof url === "function" ? url(variables) : url,
+        {
+          method,
+          schema,
+          body: buildBody ? buildBody(variables) : variables,
+          getToken,
+        }
+      );
+
+      return transform ? transform(data) : (data as unknown as TResult);
+    },
+    onSuccess,
+    onError,
+  });
 }
 
 export function useCreateMutation<TVariables, TData>({
@@ -91,7 +209,12 @@ export function useCreateMutation<TVariables, TData>({
 }: MutationOptions<TData>) {
   return useMutation<TData, Error, TVariables>({
     mutationFn: (variables) =>
-      executeMutation(url, method, variables, schema, getToken),
+      request(url, {
+        method,
+        schema,
+        body: method === "GET" ? undefined : variables,
+        getToken,
+      }),
     onSuccess,
     onError,
   });

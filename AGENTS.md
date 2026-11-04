@@ -200,8 +200,10 @@ Mientras el tooling no exista, todo slice nuevo debe incluir sus tests escritos 
 
 ### Gestión de postulaciones
 
-- `widgets/applications-kanban`: tablero de postulaciones por estado.
+- `widgets/applications-table`: tabla de postulaciones con filtros, paginación y acciones.
+- `features/create-application`: registro de una nueva postulación.
 - `features/update-application-status`: cambio de estado de una postulación.
+- `features/delete-application`: eliminación de una postulación con confirmación.
 - `entities/application`: modelo, tipos y componentes de la postulación.
 - `views/applications`: vista de seguimiento de postulaciones.
 

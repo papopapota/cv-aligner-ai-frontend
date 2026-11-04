@@ -1,9 +1,8 @@
-const fetchMock = globalThis.fetch as unknown as jest.Mock;
+const fetchMock = globalThis.fetch as unknown as jest.MockedFunction<typeof fetch>;
 
 import React from "react";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { fireEvent, render, screen, waitFor } from "@testing-library/react";
-import { describe, expect, jest } from "@jest/globals";
 
 import { RegisterForm } from "./register-form";
 
@@ -52,7 +51,7 @@ describe("RegisterForm", () => {
       status: 200,
       json: jest.fn().mockResolvedValue({ id: "user-1", email: "ana@email.com" }),
     };
-    fetchMock.mockResolvedValue(response);
+    fetchMock.mockResolvedValue(response as unknown as Response);
 
     render(<RegisterForm />, { wrapper });
 

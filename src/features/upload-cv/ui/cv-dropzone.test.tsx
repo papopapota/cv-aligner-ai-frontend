@@ -1,6 +1,5 @@
 import { fireEvent, render, screen, waitFor } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
-import { describe, expect, jest } from "@jest/globals";
 
 import { CvDropzone } from "./cv-dropzone";
 
@@ -20,7 +19,7 @@ describe("CvDropzone", () => {
 
     await waitFor(() => {
       expect(onChange).toHaveBeenCalledTimes(1);
-      expect(onChange.mock.calls[0][0].name).toBe("cv.pdf");
+      expect((onChange.mock.calls[0][0] as File).name).toBe("cv.pdf");
     });
   });
 
