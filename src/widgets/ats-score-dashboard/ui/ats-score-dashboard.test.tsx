@@ -1,5 +1,4 @@
 import { render, screen } from "@testing-library/react";
-import { describe, expect } from "@jest/globals";
 
 import { sampleAtsReport } from "@/entities/ats-report";
 import { AtsScoreDashboard } from "./ats-score-dashboard";

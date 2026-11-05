@@ -6,16 +6,16 @@ El frontend no contiene lógica de inteligencia artificial. Su responsabilidad e
 
 ## Estado del proyecto
 
-La base actual contiene el bootstrap de Next.js, Tailwind CSS v4 y componentes de shadcn/ui. La arquitectura Feature-Sliced Design (FSD) descrita en este documento es el **objetivo arquitectónico** hacia el que debe migrar el código. Las piezas marcadas como pendientes todavía no están implementadas en el repositorio.
+La base actual contiene el bootstrap de Next.js, Tailwind CSS v4 y componentes de shadcn/ui. La arquitectura Feature-Sliced Design (FSD) descrita en este documento ya está aplicada en `src/`.
 
 | Área | Estado |
 | --- | --- |
 | Next.js App Router, TypeScript y Tailwind CSS v4 | Implementado |
-| Componentes shadcn/ui (Base UI + Lucide) | Implementado en `src/components/ui/` |
+| Componentes shadcn/ui (Base UI + Lucide) | Implementado en `src/shared/ui/` |
 | Capas FSD (`views`, `widgets`, `features`, `entities`, `shared`) | Implementado |
-| Integración con la API REST | Parcial: autenticación y optimización de CV |
-| Jest + React Testing Library | Implementado |
-| Variable `NEXT_PUBLIC_BACKEND_URL` | Implementada |
+| Integración con la API REST | Implementada para `/applications`; el resto del flujo sigue mockeado |
+| Jest + React Testing Library | Configurado (`jest.config.ts` + `jest.setup.tsx`) |
+| Variable `NEXT_PUBLIC_API_URL` | Implementada en `src/shared/api/query-client.ts` |
 
 ## Inicio rápido
 
@@ -117,8 +117,8 @@ import { UploadCvForm } from "@/features/upload-cv/ui/upload-cv-form";
 | Capa | Slices |
 | --- | --- |
 | `views/` | `login`, `dashboard`, `cv-optimization`, `applications` |
-| `widgets/` | `cv-diff-viewer`, `ats-score-dashboard`, `applications-kanban` |
-| `features/` | `auth-by-email`, `upload-cv`, `upload-job-text`, `extract-job-url`, `edit-cv`, `update-application-status` |
+| `widgets/` | `cv-diff-viewer`, `ats-score-dashboard`, `applications-table` |
+| `features/` | `auth-by-email`, `upload-cv`, `upload-job-text`, `extract-job-url`, `edit-cv`, `create-application`, `update-application-status`, `delete-application` |
 | `entities/` | `cv`, `job-vacancy`, `application`, `user` |
 | `shared/` | `ui`, `api`, `hooks`, `lib`, `types` |
 
@@ -152,7 +152,7 @@ features/upload-cv/
 
 Las llamadas de red deben aislarse mockeando los clientes de `shared/api/` o los handlers de Next.js. No se deben realizar peticiones reales durante las pruebas.
 
-> **Estado actual:** Jest, React Testing Library y `jest-environment-jsdom` están configurados. La suite se ejecuta con `pnpm test`. Ten en cuenta que Jest no soporta Server Components asíncronos; para esos casos se recomienda una prueba E2E.
+> **Estado actual:** Jest y React Testing Library están configurados (`jest.config.ts`, `jest.setup.tsx` y los scripts `test:*` de `package.json`). La suite se ejecuta con `pnpm test` y las llamadas de red se mockean sobre `globalThis.fetch`. Ten en cuenta que Jest no soporta Server Components asíncronos; para esos casos se recomienda una prueba E2E.
 
 ## Variables de entorno
 
@@ -169,6 +169,23 @@ NEXT_PUBLIC_BACKEND_URL=http://127.0.0.1:8000
 El cliente centraliza la URL base en `src/shared/api/http.ts` y la usa para `/auth/*` y `/cv/optimize`.
 
 Los archivos `.env*` están ignorados por Git. No incluyas secretos en variables con prefijo `NEXT_PUBLIC_`, ya que su valor se incorpora al bundle del navegador.
+
+## Integración con la API
+
+El cliente HTTP vive en `src/shared/api/query-client.ts` y expone `useApiQuery`, `useApiMutation`, `buildUrl` y `ApiError`. Todas las respuestas se validan con Zod antes de entrar a la aplicación, y el token se lee de `sessionStorage.getItem("access_token")` y se envía como `Authorization: Bearer <token>`.
+
+### Postulaciones
+
+| Hook | Endpoint | Uso |
+| --- | --- | --- |
+| `useApplicationsQuery` (`entities/application/api`) | `GET /applications` | Lista las postulaciones del usuario autenticado y mapea el payload `snake_case` a `camelCase`. |
+| `useCreateApplicationMutation` (`features/create-application/api`) | `POST /applications` | Envía `{ "job_title", "company" }`, invalida `["applications"]` y confirma con un toast. |
+| `useUpdateApplicationStatusMutation` (`features/update-application-status/api`) | `PATCH /applications/{id}/status` | Envía `{ "status": "..." }`, invalida la query `["applications"]` y confirma con un toast. |
+| `useDeleteApplicationMutation` (`features/delete-application/api`) | `DELETE /applications/{id}` | Elimina la postulación (respuesta `204`), invalida `["applications"]` y confirma con un toast. |
+
+La ruta `/applications` compone `views/applications` → `widgets/applications-table`, que muestra la tabla de postulaciones con filtros por puesto, empresa, estado y fecha, paginación, y las acciones de crear, ver, cambiar estado y eliminar. Incluye estados de carga, sesión no iniciada (`401`), lista vacía y errores de mutación.
+
+Los estados válidos son `pending`, `under-review`, `accepted` y `rejected`. Un estado desconocido en la respuesta se normaliza a `pending` para no romper la tabla.
 
 ## Scripts disponibles
 

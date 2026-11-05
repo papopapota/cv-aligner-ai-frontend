@@ -6,11 +6,13 @@ function PageHeader({
   className,
   title,
   description,
+  descriptionClassName,
   actions,
   ...props
 }: React.ComponentProps<"div"> & {
   title: string
   description?: string
+  descriptionClassName?: string
   actions?: React.ReactNode
 }) {
   return (
@@ -27,7 +29,9 @@ function PageHeader({
           {title}
         </h1>
         {description ? (
-          <p className="text-base text-muted-foreground">{description}</p>
+          <p className={cn("text-base text-muted-foreground", descriptionClassName)}>
+            {description}
+          </p>
         ) : null}
       </div>
       {actions ? <div className="flex shrink-0 items-center gap-3">{actions}</div> : null}

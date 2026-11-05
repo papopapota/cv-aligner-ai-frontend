@@ -1,6 +1,5 @@
 import { fireEvent, render, screen, waitFor } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
-import { describe, expect, jest } from "@jest/globals";
 
 import type { CvUpload } from "../model/validate-file";
 import { CvDropzone } from "./cv-dropzone";

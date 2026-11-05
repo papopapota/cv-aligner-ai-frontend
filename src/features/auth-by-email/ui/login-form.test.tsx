@@ -3,7 +3,6 @@ const fetchMock = globalThis.fetch as unknown as jest.MockedFunction<typeof fetc
 import React from "react";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { fireEvent, render, screen, waitFor } from "@testing-library/react";
-import { describe, expect, jest } from "@jest/globals";
 
 import { API_URL } from "@/shared/api";
 import { LoginForm } from "./login-form";
