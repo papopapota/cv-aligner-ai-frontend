@@ -4,6 +4,8 @@ import { useMutation, useQuery } from "@tanstack/react-query";
 import type { QueryKey } from "@tanstack/react-query";
 import type { z } from "zod";
 
+import { API_URL } from "./http";
+
 export type HttpMethod = "GET" | "POST" | "PUT" | "PATCH" | "DELETE";
 
 export type QueryParams = Record<
@@ -50,8 +52,6 @@ export interface ApiQueryOptions<TData, TSelected = TData> {
   enabled?: boolean;
   getToken?: () => string | null;
 }
-
-const API_URL = process.env.NEXT_PUBLIC_API_URL || "http://localhost:8000";
 
 export function buildUrl(url: string, params?: QueryParams): string {
   const search = new URLSearchParams();
