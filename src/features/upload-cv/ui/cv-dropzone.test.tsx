@@ -7,7 +7,7 @@ import { CvDropzone } from "./cv-dropzone";
 describe("CvDropzone", () => {
   it("acepta un PDF válido y notifica el archivo", async () => {
     const user = userEvent.setup();
-    const onChange = jest.fn<(upload: CvUpload) => void>();
+    const onChange = jest.fn<void, [CvUpload]>();
     const onRemove = jest.fn();
 
     render(<CvDropzone file={null} onChange={onChange} onRemove={onRemove} />);
