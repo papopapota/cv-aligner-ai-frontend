@@ -13,6 +13,19 @@ const result: CvOptimizationResult = {
   optimized_variance_score: 0.2,
   writer_attempts: 2,
   is_within_threshold: true,
+  original_ic: 47.4,
+  optimized_ic: 52.5,
+  original_per_dimension: {
+    experience: 0.487,
+    languages: 0.578,
+    technical_skills: 0.712,
+  },
+  optimized_per_dimension: {
+    experience: 0.487,
+    languages: 0.578,
+    technical_skills: 0.742,
+  },
+  gap_report: "Falta experiencia específica en Node.js.",
 }
 
 describe("result-storage", () => {
