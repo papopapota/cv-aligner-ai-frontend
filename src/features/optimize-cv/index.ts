@@ -4,6 +4,7 @@ export {
   clearOptimizationResult,
   createJobDescriptionFile,
   cvOptimizationResultSchema,
+  dimensionScoresSchema,
   getOptimizationResultSnapshot,
   OPTIMIZATION_RESULT_STORAGE_KEY,
   parseOptimizationResult,
@@ -11,4 +12,4 @@ export {
   saveOptimizationResult,
   subscribeToOptimizationResult,
 } from "./model"
-export type { CvOptimizationResult } from "./model"
+export type { CvOptimizationResult, DimensionScores } from "./model"
