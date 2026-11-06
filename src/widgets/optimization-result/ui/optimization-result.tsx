@@ -18,10 +18,25 @@ import {
   CardHeader,
   CardTitle,
   EmptyState,
+  Progress,
 } from "@/shared/ui"
+import { buildDimensionComparisons } from "../model/dimension-comparison"
 
 function formatVariance(value: number): string {
   return `${Math.round(value * 100)}%`
+}
+
+function formatIc(value: number): string {
+  return value.toFixed(1)
+}
+
+function formatDimension(value: number): string {
+  return `${Math.round(value * 100)}%`
+}
+
+function formatDelta(value: number): string {
+  const percentagePoints = Math.round(value * 100)
+  return `${percentagePoints > 0 ? "+" : ""}${percentagePoints} pp`
 }
 
 export function OptimizationResult() {
@@ -50,9 +65,15 @@ export function OptimizationResult() {
     )
   }
 
+  const dimensions = buildDimensionComparisons(
+    result.original_per_dimension,
+    result.optimized_per_dimension
+  )
+  const hasGapReport = result.gap_report.trim().length > 0
+
   return (
     <div className="flex flex-col gap-4">
-      <div className="grid gap-4 sm:grid-cols-2">
+      <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
         <Card>
           <CardHeader>
             <CardTitle>Varianza original</CardTitle>
@@ -80,7 +101,88 @@ export function OptimizationResult() {
             </p>
           </CardContent>
         </Card>
+
+        <Card>
+          <CardHeader>
+            <CardTitle>IC original</CardTitle>
+            <CardDescription>
+              Índice de compatibilidad de tu CV inicial.
+            </CardDescription>
+          </CardHeader>
+          <CardContent>
+            <p className="text-[28px] leading-[1.4] text-ink">
+              {formatIc(result.original_ic)}
+            </p>
+          </CardContent>
+        </Card>
+
+        <Card>
+          <CardHeader>
+            <CardTitle>IC optimizado</CardTitle>
+            <CardDescription>
+              Índice de compatibilidad tras la optimización.
+            </CardDescription>
+          </CardHeader>
+          <CardContent>
+            <p className="text-[28px] leading-[1.4] text-ink">
+              {formatIc(result.optimized_ic)}
+            </p>
+          </CardContent>
+        </Card>
       </div>
+
+      <Card>
+        <CardHeader>
+          <CardTitle>Comparativa por dimensión</CardTitle>
+          <CardDescription>
+            Evolución del ajuste en experiencia, idiomas y habilidades
+            técnicas.
+          </CardDescription>
+        </CardHeader>
+        <CardContent className="flex flex-col gap-6">
+          {dimensions.map((dimension) => (
+            <div key={dimension.key} className="flex flex-col gap-2">
+              <div className="flex flex-wrap items-baseline justify-between gap-2">
+                <span className="text-base text-ink">{dimension.label}</span>
+                <span className="text-sm text-muted-foreground">
+                  Original {formatDimension(dimension.original)} · Optimizado{" "}
+                  {formatDimension(dimension.optimized)}
+                </span>
+              </div>
+              <Progress
+                value={dimension.optimized * 100}
+                aria-label={dimension.label}
+              />
+              <span className="text-xs text-muted-foreground">
+                {dimension.delta >= 0 ? "Mejora" : "Variación"}{" "}
+                {formatDelta(dimension.delta)}
+              </span>
+            </div>
+          ))}
+        </CardContent>
+      </Card>
+
+      <Card>
+        <CardHeader>
+          <CardTitle>Brechas detectadas</CardTitle>
+          <CardDescription>
+            Diferencias entre tu CV y los requisitos de la vacante.
+          </CardDescription>
+        </CardHeader>
+        <CardContent>
+          {hasGapReport ? (
+            <div className="border border-line bg-canvas p-4">
+              <p className="whitespace-pre-wrap text-sm text-ink">
+                {result.gap_report}
+              </p>
+            </div>
+          ) : (
+            <p className="text-sm text-muted-foreground">
+              No se detectaron brechas relevantes.
+            </p>
+          )}
+        </CardContent>
+      </Card>
 
       <Card>
         <CardHeader>
