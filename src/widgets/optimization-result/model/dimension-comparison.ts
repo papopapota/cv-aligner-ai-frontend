@@ -1,12 +1,16 @@
 import type { DimensionScores } from "@/features/optimize-cv"
 
-export type DimensionKey = keyof DimensionScores
+export type DimensionKey = string
 
-export const DIMENSION_LABELS: Record<DimensionKey, string> = {
+export const DIMENSION_LABELS: Record<string, string> = {
+  certifications: "Certificaciones",
+  education: "Formación",
   experience: "Experiencia",
   languages: "Idiomas",
   technical_skills: "Habilidades técnicas",
 }
+
+const DIMENSION_ORDER = Object.keys(DIMENSION_LABELS)
 
 export interface DimensionComparison {
   key: DimensionKey
@@ -16,15 +20,28 @@ export interface DimensionComparison {
   delta: number
 }
 
-const DIMENSION_KEYS = Object.keys(DIMENSION_LABELS) as DimensionKey[]
+function getDimensionLabel(key: DimensionKey): string {
+  return DIMENSION_LABELS[key] ?? key.replaceAll("_", " ")
+}
+
+function getComparableKeys(
+  original: DimensionScores,
+  optimized: DimensionScores
+): DimensionKey[] {
+  const commonKeys = Object.keys(optimized).filter((key) => key in original)
+  const knownKeys = DIMENSION_ORDER.filter((key) => commonKeys.includes(key))
+  const unknownKeys = commonKeys.filter((key) => !DIMENSION_ORDER.includes(key))
+
+  return [...knownKeys, ...unknownKeys]
+}
 
 export function buildDimensionComparisons(
   original: DimensionScores,
   optimized: DimensionScores
 ): DimensionComparison[] {
-  return DIMENSION_KEYS.map((key) => ({
+  return getComparableKeys(original, optimized).map((key) => ({
     key,
-    label: DIMENSION_LABELS[key],
+    label: getDimensionLabel(key),
     original: original[key],
     optimized: optimized[key],
     delta: optimized[key] - original[key],

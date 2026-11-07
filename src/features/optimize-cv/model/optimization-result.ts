@@ -1,10 +1,9 @@
 import { z } from "zod"
 
-export const dimensionScoresSchema = z.object({
-  experience: z.number().min(0).max(1),
-  languages: z.number().min(0).max(1),
-  technical_skills: z.number().min(0).max(1),
-})
+export const dimensionScoresSchema = z.record(
+  z.string().min(1),
+  z.number().min(0).max(1)
+)
 
 export const cvOptimizationResultSchema = z.object({
   optimized_content: z.string().min(1),
