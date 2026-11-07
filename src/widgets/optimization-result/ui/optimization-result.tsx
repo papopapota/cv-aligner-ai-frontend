@@ -135,30 +135,35 @@ export function OptimizationResult() {
         <CardHeader>
           <CardTitle>Comparativa por dimensión</CardTitle>
           <CardDescription>
-            Evolución del ajuste en experiencia, idiomas y habilidades
-            técnicas.
+            Evolución del ajuste en las dimensiones disponibles.
           </CardDescription>
         </CardHeader>
         <CardContent className="flex flex-col gap-6">
-          {dimensions.map((dimension) => (
-            <div key={dimension.key} className="flex flex-col gap-2">
-              <div className="flex flex-wrap items-baseline justify-between gap-2">
-                <span className="text-base text-ink">{dimension.label}</span>
-                <span className="text-sm text-muted-foreground">
-                  Original {formatDimension(dimension.original)} · Optimizado{" "}
-                  {formatDimension(dimension.optimized)}
+          {dimensions.length > 0 ? (
+            dimensions.map((dimension) => (
+              <div key={dimension.key} className="flex flex-col gap-2">
+                <div className="flex flex-wrap items-baseline justify-between gap-2">
+                  <span className="text-base text-ink">{dimension.label}</span>
+                  <span className="text-sm text-muted-foreground">
+                    Original {formatDimension(dimension.original)} · Optimizado{" "}
+                    {formatDimension(dimension.optimized)}
+                  </span>
+                </div>
+                <Progress
+                  value={dimension.optimized * 100}
+                  aria-label={dimension.label}
+                />
+                <span className="text-xs text-muted-foreground">
+                  {dimension.delta >= 0 ? "Mejora" : "Variación"}{" "}
+                  {formatDelta(dimension.delta)}
                 </span>
               </div>
-              <Progress
-                value={dimension.optimized * 100}
-                aria-label={dimension.label}
-              />
-              <span className="text-xs text-muted-foreground">
-                {dimension.delta >= 0 ? "Mejora" : "Variación"}{" "}
-                {formatDelta(dimension.delta)}
-              </span>
-            </div>
-          ))}
+            ))
+          ) : (
+            <p className="text-sm text-muted-foreground">
+              No hay dimensiones comparables disponibles.
+            </p>
+          )}
         </CardContent>
       </Card>
 

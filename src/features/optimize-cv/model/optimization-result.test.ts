@@ -12,14 +12,18 @@ function createPayload() {
     original_ic: 47.42792536818668,
     optimized_ic: 52.526491409966816,
     original_per_dimension: {
-      experience: 0.487,
-      languages: 0.578,
-      technical_skills: 0.712,
+      certifications: 0.5858045057162942,
+      education: 0.5454164791875328,
+      experience: 0.4307512476862112,
+      languages: 0.5099259653484827,
+      technical_skills: 0.6242150835311482,
     },
     optimized_per_dimension: {
-      experience: 0.48753576009618216,
-      languages: 0.5783152165695601,
-      technical_skills: 0.7422323118510642,
+      certifications: 0.6926681258738056,
+      education: 0.547736813404027,
+      experience: 0.4515384546593321,
+      languages: 0.5099259653484827,
+      technical_skills: 0.7114418155074318,
     },
     gap_report: "Falta experiencia específica en Node.js.",
   }
@@ -39,6 +43,38 @@ describe("cvOptimizationResultSchema", () => {
     })
 
     expect(parsed.success).toBe(true)
+  })
+
+  it("acepta subconjuntos de dimensiones", () => {
+    const parsed = cvOptimizationResultSchema.safeParse({
+      ...createPayload(),
+      original_per_dimension: {
+        experience: 0.48,
+        languages: 0.57,
+      },
+      optimized_per_dimension: {
+        experience: 0.49,
+        languages: 0.57,
+      },
+    })
+
+    expect(parsed.success).toBe(true)
+  })
+
+  it("acepta dimensiones desconocidas y las conserva", () => {
+    const parsed = cvOptimizationResultSchema.safeParse({
+      ...createPayload(),
+      original_per_dimension: {
+        soft_skills: 0.4,
+      },
+      optimized_per_dimension: {
+        soft_skills: 0.6,
+      },
+    })
+
+    expect(parsed.success).toBe(true)
+    expect(parsed.data?.original_per_dimension).toEqual({ soft_skills: 0.4 })
+    expect(parsed.data?.optimized_per_dimension).toEqual({ soft_skills: 0.6 })
   })
 
   it("rechaza scores fuera del rango 0..1", () => {
