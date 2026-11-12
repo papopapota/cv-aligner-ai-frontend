@@ -1,3 +1,12 @@
+export { getCvStatus } from "./api/get-cv-status"
+export { uploadCv } from "./api/upload-cv"
+export {
+  isCvFailed,
+  isCvPending,
+  isCvReady,
+  waitForCvReady,
+} from "./model/cv-status"
+export type { WaitForCvReadyOptions } from "./model/cv-status"
 export {
   createCvFile,
   createCvUpload,
