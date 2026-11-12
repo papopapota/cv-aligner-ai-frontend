@@ -6,8 +6,11 @@ import { fireEvent, render, screen, waitFor } from "@testing-library/react"
 import userEvent from "@testing-library/user-event"
 import { beforeEach, describe, expect, jest } from "@jest/globals"
 
+import { API_URL } from "@/shared/api"
 import { mockPush } from "../../../../jest.setup"
 import { UploadPanel } from "./upload-panel"
+
+const CV_ID = "11111111-1111-4111-8111-111111111111"
 
 function renderUploadPanel() {
   const queryClient = new QueryClient()
@@ -18,12 +21,52 @@ function renderUploadPanel() {
   return render(<UploadPanel />, { wrapper })
 }
 
-function mockJsonResponse(payload: unknown): Response {
+function mockJsonResponse(
+  payload: unknown,
+  { ok = true, status = 200 }: { ok?: boolean; status?: number } = {}
+): Response {
   return {
-    ok: true,
-    status: 200,
+    ok,
+    status,
     json: jest.fn(async () => payload),
   } as unknown as Response
+}
+
+function createUploadPayload() {
+  return {
+    id: CV_ID,
+    filename: "cv.pdf",
+    content_type: "application/pdf",
+    size_bytes: 9,
+    sha256: "abc123",
+    status: "UPLOADED",
+    action_required: "WAIT_FOR_PARSING",
+  }
+}
+
+function createOptimizationPayload() {
+  return {
+    optimized_content: "Contenido optimizado",
+    optimized_body: "Resumen Profesional\n\nContenido optimizado",
+    personal_info: { full_name: "Ada Lovelace" },
+    original_variance_score: 0.8,
+    optimized_variance_score: 0.2,
+    writer_attempts: 2,
+    is_within_threshold: true,
+    original_ic: 47.4,
+    optimized_ic: 52.5,
+    original_per_dimension: {
+      experience: 0.487,
+      languages: 0.578,
+      technical_skills: 0.712,
+    },
+    optimized_per_dimension: {
+      experience: 0.487,
+      languages: 0.578,
+      technical_skills: 0.742,
+    },
+    gap_report: "Falta experiencia específica en Node.js.",
+  }
 }
 
 describe("UploadPanel", () => {
@@ -63,30 +106,18 @@ describe("UploadPanel", () => {
     })
   })
 
-  it("envía el CV y la vacante al backend y navega al análisis", async () => {
+  it("sube el CV, espera el parseo y navega al análisis", async () => {
     const user = userEvent.setup()
-    fetchMock.mockResolvedValue(
-      mockJsonResponse({
-        optimized_content: "Contenido optimizado",
-        original_variance_score: 0.8,
-        optimized_variance_score: 0.2,
-        writer_attempts: 2,
-        is_within_threshold: true,
-        original_ic: 47.4,
-        optimized_ic: 52.5,
-        original_per_dimension: {
-          experience: 0.487,
-          languages: 0.578,
-          technical_skills: 0.712,
-        },
-        optimized_per_dimension: {
-          experience: 0.487,
-          languages: 0.578,
-          technical_skills: 0.742,
-        },
-        gap_report: "Falta experiencia específica en Node.js.",
-      })
-    )
+    fetchMock
+      .mockResolvedValueOnce(mockJsonResponse(createUploadPayload(), { status: 202 }))
+      .mockResolvedValueOnce(
+        mockJsonResponse({
+          ...createUploadPayload(),
+          status: "PARSED",
+          action_required: null,
+        })
+      )
+      .mockResolvedValueOnce(mockJsonResponse(createOptimizationPayload()))
 
     renderUploadPanel()
 
@@ -104,23 +135,63 @@ describe("UploadPanel", () => {
     await user.click(screen.getByText("Personalizar CV"))
 
     await waitFor(() => {
-      expect(fetchMock).toHaveBeenCalledWith(
-        "http://127.0.0.1:8000/cv/optimize",
-        expect.objectContaining({ method: "POST" })
-      )
+      expect(fetchMock).toHaveBeenCalledTimes(3)
     })
 
-    const request = fetchMock.mock.calls[0][1] as RequestInit
-    const body = request.body as FormData
-
-    expect(body).toBeInstanceOf(FormData)
-    expect((body.get("cv_file") as File).name).toBe("cv.pdf")
-    expect((body.get("job_description_file") as File).name).toBe(
-      "job-description.txt"
+    expect(fetchMock.mock.calls[0][0]).toBe(`${API_URL}/cvs`)
+    expect(fetchMock.mock.calls[1][0]).toBe(`${API_URL}/cvs/${CV_ID}`)
+    expect(fetchMock.mock.calls[2][0]).toBe(
+      `${API_URL}/cvs/${CV_ID}/optimize`
     )
+
+    const uploadRequest = fetchMock.mock.calls[0][1] as RequestInit
+    const uploadBody = uploadRequest.body as FormData
+
+    expect(uploadBody).toBeInstanceOf(FormData)
+    expect((uploadBody.get("cv_file") as File).name).toBe("cv.pdf")
+
+    const optimizeRequest = fetchMock.mock.calls[2][1] as RequestInit
+    expect(JSON.parse(String(optimizeRequest.body))).toEqual({
+      job_description:
+        "Buscamos una persona con experiencia en React, TypeScript y testing automatizado.",
+    })
 
     await waitFor(() => {
       expect(mockPush).toHaveBeenCalledWith("/analysis")
     })
+  })
+
+  it("muestra un error cuando el backend pide re-subir el CV", async () => {
+    const user = userEvent.setup()
+    fetchMock
+      .mockResolvedValueOnce(mockJsonResponse(createUploadPayload(), { status: 202 }))
+      .mockResolvedValueOnce(
+        mockJsonResponse({
+          ...createUploadPayload(),
+          status: "ERROR",
+          action_required: "REUPLOAD_CV",
+          error_message: "El PDF no contiene texto.",
+        })
+      )
+
+    renderUploadPanel()
+
+    await user.upload(
+      screen.getByLabelText("Seleccionar archivo de CV"),
+      [new File(["contenido"], "cv.pdf", { type: "application/pdf" })]
+    )
+
+    await user.click(screen.getByText("Texto"))
+    await user.type(
+      screen.getByLabelText("Descripción de la vacante"),
+      "Buscamos una persona con experiencia en React."
+    )
+
+    await user.click(screen.getByText("Personalizar CV"))
+
+    await waitFor(() => {
+      expect(screen.getByText("El PDF no contiene texto.")).toBeInTheDocument()
+    })
+    expect(mockPush).not.toHaveBeenCalled()
   })
 })
