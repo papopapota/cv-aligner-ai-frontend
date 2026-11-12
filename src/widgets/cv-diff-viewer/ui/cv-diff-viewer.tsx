@@ -19,18 +19,17 @@ import {
 
 import {
   EditableCvBlock,
+  buildCvSectionComparisons,
   buildOriginalBlocks,
   clearCvEditorDraft,
   countAchievements,
   exportCvToPdf,
-  findMatchingBlock,
   getCvEditorDraftSnapshot,
-  parseCvBlocks,
   parseCvEditorDraft,
   saveCvEditorDraft,
   subscribeToCvEditorDraft,
   useCvContentQuery,
-  type CvBlock,
+  type CvSectionComparison,
 } from "@/features/edit-cv"
 import {
   getOptimizationResultSnapshot,
@@ -49,7 +48,9 @@ import {
   buttonVariants,
   toast,
 } from "@/shared/ui"
+import { buildPersonalInfoComparisons } from "../model/personal-info-comparison"
 import { CvOriginalPanel } from "./cv-original-panel"
+import { CvPersonalInfoDiff } from "./cv-personal-info-diff"
 
 function useOptimizationResult() {
   const rawResult = useSyncExternalStore(
@@ -61,21 +62,57 @@ function useOptimizationResult() {
   return useMemo(() => parseOptimizationResult(rawResult), [rawResult])
 }
 
+function formatCount(count: number, singular: string, plural: string): string {
+  return `${count} ${count === 1 ? singular : plural}`
+}
+
 export function CvDiffViewer() {
   const result = useOptimizationResult()
   const cvId = result?.cv_id
   const contentQuery = useCvContentQuery(cvId)
-  const optimizedSource = result?.optimized_body ?? result?.optimized_content ?? ""
-  const optimizedBlocks = useMemo(
-    () => parseCvBlocks(optimizedSource),
-    [optimizedSource]
-  )
+  const originalTechnicalData = contentQuery.data?.structured_cv?.technical_data
+  const optimizedSections = result?.optimized_sections
+  const fallbackOptimizedBody =
+    result?.optimized_body ?? result?.optimized_content
   const originalBlocks = useMemo(
     () => (contentQuery.data ? buildOriginalBlocks(contentQuery.data) : []),
     [contentQuery.data]
   )
-  const personalInfo =
-    result?.personal_info ?? contentQuery.data?.structured_cv?.personal_info
+  const comparisons = useMemo(
+    () =>
+      buildCvSectionComparisons({
+        originalSections: originalTechnicalData,
+        originalBlocks,
+        optimizedSections,
+        fallbackOptimizedBody,
+      }),
+    [
+      fallbackOptimizedBody,
+      optimizedSections,
+      originalBlocks,
+      originalTechnicalData,
+    ]
+  )
+  const draftBase = useMemo(() => {
+    if (optimizedSections) {
+      return JSON.stringify(optimizedSections)
+    }
+
+    return fallbackOptimizedBody ?? ""
+  }, [fallbackOptimizedBody, optimizedSections])
+  const originalPersonalInfo = contentQuery.data?.structured_cv?.personal_info
+  const optimizedPersonalInfo = result?.personal_info ?? originalPersonalInfo
+  const personalInfoComparisons = useMemo(
+    () =>
+      buildPersonalInfoComparisons(
+        originalPersonalInfo,
+        optimizedPersonalInfo
+      ),
+    [optimizedPersonalInfo, originalPersonalInfo]
+  )
+  const personalInfoMissing = Boolean(
+    result && !result.personal_info && originalPersonalInfo
+  )
 
   const rawDraft = useSyncExternalStore(
     subscribeToCvEditorDraft,
@@ -84,23 +121,25 @@ export function CvDiffViewer() {
   )
   const draft = useMemo(() => parseCvEditorDraft(rawDraft), [rawDraft])
   const edits = useMemo(() => {
-    if (!draft || draft.baseOptimizedContent !== optimizedSource) {
+    if (!draft || draft.baseOptimizedContent !== draftBase) {
       return {}
     }
 
     return draft.edits
-  }, [draft, optimizedSource])
+  }, [draft, draftBase])
   const [isExporting, setIsExporting] = useState(false)
 
   const valueFor = useCallback(
-    (block: CvBlock) => edits[block.id] ?? block.body,
+    (comparison: CvSectionComparison) =>
+      edits[comparison.key] ?? comparison.optimizedBody,
     [edits]
   )
 
-  const originalTextFor = useCallback(
-    (block: CvBlock) =>
-      findMatchingBlock(originalBlocks, block.heading)?.body ?? "",
-    [originalBlocks]
+  const hasLocalEdit = useCallback(
+    (comparison: CvSectionComparison) =>
+      edits[comparison.key] !== undefined &&
+      edits[comparison.key] !== comparison.optimizedBody,
+    [edits]
   )
 
   const persistEdits = useCallback(
@@ -111,24 +150,24 @@ export function CvDiffViewer() {
 
       saveCvEditorDraft({
         cvId,
-        baseOptimizedContent: optimizedSource,
+        baseOptimizedContent: draftBase,
         edits: nextEdits,
       })
     },
-    [cvId, optimizedSource, result]
+    [cvId, draftBase, result]
   )
 
   const handleChange = useCallback(
-    (blockId: string, value: string) => {
-      persistEdits({ ...edits, [blockId]: value })
+    (sectionKey: string, value: string) => {
+      persistEdits({ ...edits, [sectionKey]: value })
     },
     [edits, persistEdits]
   )
 
   const handleRevert = useCallback(
-    (blockId: string) => {
+    (sectionKey: string) => {
       const nextEdits = { ...edits }
-      delete nextEdits[blockId]
+      delete nextEdits[sectionKey]
       persistEdits(nextEdits)
     },
     [edits, persistEdits]
@@ -143,11 +182,14 @@ export function CvDiffViewer() {
 
     try {
       await exportCvToPdf({
-        personalInfo,
-        blocks: optimizedBlocks.map((block) => ({
-          ...block,
-          body: valueFor(block),
-        })),
+        personalInfo: optimizedPersonalInfo,
+        blocks: comparisons
+          .filter((comparison) => comparison.status !== "removed")
+          .map((comparison) => ({
+            id: comparison.key,
+            heading: comparison.heading,
+            body: valueFor(comparison),
+          })),
       })
       toast.add({
         title: "PDF descargado",
@@ -165,7 +207,7 @@ export function CvDiffViewer() {
     } finally {
       setIsExporting(false)
     }
-  }, [optimizedBlocks, personalInfo, valueFor])
+  }, [comparisons, optimizedPersonalInfo, valueFor])
 
   if (!result) {
     return (
@@ -182,13 +224,24 @@ export function CvDiffViewer() {
     )
   }
 
-  const editedContent = optimizedBlocks
-    .map((block) => valueFor(block))
+  const editedContent = comparisons
+    .filter((comparison) => comparison.status !== "removed")
+    .map((comparison) => valueFor(comparison))
     .join("\n")
   const achievements = countAchievements(editedContent)
-  const modifiedCount = optimizedBlocks.filter(
-    (block) => valueFor(block) !== block.body
-  ).length
+  const localEditCount = comparisons.filter(hasLocalEdit).length
+  const detectedCounts = comparisons.reduce(
+    (counts, comparison) => {
+      counts[comparison.status] += 1
+      return counts
+    },
+    { unchanged: 0, modified: 0, added: 0, removed: 0 }
+  )
+  const detectedSummary = [
+    formatCount(detectedCounts.modified, "modificada", "modificadas"),
+    formatCount(detectedCounts.added, "añadida", "añadidas"),
+    formatCount(detectedCounts.removed, "eliminada", "eliminadas"),
+  ].join(" · ")
 
   return (
     <div className="flex flex-col gap-6">
@@ -226,7 +279,7 @@ export function CvDiffViewer() {
             type="button"
             size="sm"
             onClick={handleExport}
-            disabled={isExporting || optimizedBlocks.length === 0}
+            disabled={isExporting || comparisons.length === 0}
           >
             <Download aria-hidden="true" />
             {isExporting ? "Generando PDF..." : "Exportar PDF"}
@@ -241,6 +294,11 @@ export function CvDiffViewer() {
         </div>
       ) : null}
 
+      <CvPersonalInfoDiff
+        comparisons={personalInfoComparisons}
+        optimizedMissing={personalInfoMissing}
+      />
+
       <div className="grid gap-6 xl:grid-cols-2">
         <Card>
           <CardHeader>
@@ -251,8 +309,14 @@ export function CvDiffViewer() {
           </CardHeader>
           <CardContent>
             <CvOriginalPanel
-              personalInfo={personalInfo}
-              blocks={originalBlocks}
+              personalInfo={originalPersonalInfo}
+              blocks={comparisons
+                .filter((comparison) => comparison.originalBody.length > 0)
+                .map((comparison) => ({
+                  id: comparison.key,
+                  heading: comparison.heading,
+                  body: comparison.originalBody,
+                }))}
             />
           </CardContent>
         </Card>
@@ -269,15 +333,21 @@ export function CvDiffViewer() {
             </CardDescription>
           </CardHeader>
           <CardContent className="flex flex-col gap-4">
-            {optimizedBlocks.length > 0 ? (
-              optimizedBlocks.map((block) => (
+            {comparisons.length > 0 ? (
+              comparisons.map((comparison) => (
                 <EditableCvBlock
-                  key={block.id}
-                  block={block}
-                  originalText={originalTextFor(block)}
-                  value={valueFor(block)}
-                  onChange={(value) => handleChange(block.id, value)}
-                  onRevert={() => handleRevert(block.id)}
+                  key={comparison.key}
+                  block={{
+                    id: comparison.key,
+                    heading: comparison.heading,
+                    body: comparison.optimizedBody,
+                  }}
+                  status={comparison.status}
+                  originalText={comparison.originalBody}
+                  value={valueFor(comparison)}
+                  hasLocalEdit={hasLocalEdit(comparison)}
+                  onChange={(value) => handleChange(comparison.key, value)}
+                  onRevert={() => handleRevert(comparison.key)}
                 />
               ))
             ) : (
@@ -291,15 +361,17 @@ export function CvDiffViewer() {
 
       <div className="flex flex-col gap-3 border-t border-line pt-6 sm:flex-row sm:items-center sm:justify-between">
         <p className="text-sm text-muted-foreground">
-          {achievements} logros detectados · {modifiedCount} secciones
-          modificadas
+          {achievements} logros detectados · {detectedSummary}
+          {localEditCount > 0
+            ? ` · ${formatCount(localEditCount, "edición local", "ediciones locales")}`
+            : ""}
         </p>
         <Button
           type="button"
           variant="outline"
           size="sm"
           onClick={handleReset}
-          disabled={modifiedCount === 0}
+          disabled={localEditCount === 0}
         >
           <RotateCcw aria-hidden="true" />
           Restaurar todo
