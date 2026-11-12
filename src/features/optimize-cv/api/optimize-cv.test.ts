@@ -7,12 +7,40 @@ import { beforeEach, describe, expect, jest, it } from "@jest/globals"
 import { API_URL } from "@/shared/api"
 import { optimizeCv } from "./optimize-cv"
 
+const CV_ID = "11111111-1111-4111-8111-111111111111"
+
 function createInput() {
   return {
-    cvFile: new File(["cv"], "cv.pdf", { type: "application/pdf" }),
-    jobDescriptionFile: new File(["vacante"], "job-description.txt", {
-      type: "text/plain",
-    }),
+    cvId: CV_ID,
+    jobDescription: "Buscamos experiencia en React y TypeScript.",
+  }
+}
+
+function createPayload() {
+  return {
+    optimized_content: JSON.stringify({ summary: "Contenido optimizado" }),
+    optimized_body: "Resumen Profesional\n\nContenido optimizado",
+    personal_info: {
+      full_name: "Ada Lovelace",
+      email: "ada@example.com",
+    },
+    original_variance_score: 0.8,
+    optimized_variance_score: 0.2,
+    writer_attempts: 2,
+    is_within_threshold: true,
+    original_ic: 47.4,
+    optimized_ic: 52.5,
+    original_per_dimension: {
+      experience: 0.487,
+      languages: 0.578,
+      technical_skills: 0.712,
+    },
+    optimized_per_dimension: {
+      experience: 0.487,
+      languages: 0.578,
+      technical_skills: 0.742,
+    },
+    gap_report: "Falta experiencia específica en Node.js.",
   }
 }
 
@@ -33,50 +61,36 @@ describe("optimizeCv", () => {
     window.sessionStorage.clear()
   })
 
-  it("envía cv_file y job_description_file como multipart", async () => {
+  it("envía el job_description como JSON al endpoint del CV", async () => {
     const input = createInput()
-    const responsePayload = {
-      optimized_content: "Contenido optimizado",
-      original_variance_score: 0.8,
-      optimized_variance_score: 0.2,
-      writer_attempts: 2,
-      is_within_threshold: true,
-      original_ic: 47.4,
-      optimized_ic: 52.5,
-      original_per_dimension: {
-        certifications: 0.586,
-        education: 0.545,
-        experience: 0.431,
-        languages: 0.51,
-        technical_skills: 0.624,
-      },
-      optimized_per_dimension: {
-        certifications: 0.693,
-        education: 0.548,
-        experience: 0.452,
-        languages: 0.51,
-        technical_skills: 0.711,
-      },
-      gap_report: "Falta experiencia específica en Node.js.",
-    }
-    fetchMock.mockResolvedValue(mockJsonResponse(responsePayload))
+    fetchMock.mockResolvedValue(mockJsonResponse(createPayload()))
 
     const result = await optimizeCv(input)
 
     expect(fetchMock).toHaveBeenCalledWith(
-      `${API_URL}/cv/optimize`,
+      `${API_URL}/cvs/${CV_ID}/optimize`,
       expect.objectContaining({
         method: "POST",
-        body: expect.any(FormData),
+        headers: expect.objectContaining({
+          "Content-Type": "application/json",
+        }),
+        body: JSON.stringify({ job_description: input.jobDescription }),
       })
     )
 
-    const request = fetchMock.mock.calls[0][1] as RequestInit
-    const body = request.body as FormData
+    expect(result.cv_id).toBe(CV_ID)
+    expect(result.optimized_body).toBe("Resumen Profesional\n\nContenido optimizado")
+  })
 
-    expect(body.get("cv_file")).toBe(input.cvFile)
-    expect(body.get("job_description_file")).toBe(input.jobDescriptionFile)
-    expect(result).toEqual(responsePayload)
+  it("conserva el cv_id devuelto por el backend", async () => {
+    const backendCvId = "22222222-2222-4222-8222-222222222222"
+    fetchMock.mockResolvedValue(
+      mockJsonResponse({ ...createPayload(), cv_id: backendCvId })
+    )
+
+    const result = await optimizeCv(createInput())
+
+    expect(result.cv_id).toBe(backendCvId)
   })
 
   it("propaga el mensaje de error del backend", async () => {
@@ -93,9 +107,7 @@ describe("optimizeCv", () => {
   })
 
   it("rechaza una respuesta con formato inesperado", async () => {
-    fetchMock.mockResolvedValue(
-      mockJsonResponse({ optimized_content: "" })
-    )
+    fetchMock.mockResolvedValue(mockJsonResponse({ optimized_content: "" }))
 
     await expect(optimizeCv(createInput())).rejects.toThrow(
       "La respuesta del servidor no tiene el formato esperado."

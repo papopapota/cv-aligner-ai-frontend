@@ -1,12 +1,17 @@
 import { z } from "zod"
 
+import { personalInfoSchema } from "@/entities/cv"
+
 export const dimensionScoresSchema = z.record(
   z.string().min(1),
   z.number().min(0).max(1)
 )
 
 export const cvOptimizationResultSchema = z.object({
+  cv_id: z.string().uuid().optional(),
   optimized_content: z.string().min(1),
+  optimized_body: z.string().optional(),
+  personal_info: personalInfoSchema.optional(),
   original_variance_score: z.number().min(0).max(1),
   optimized_variance_score: z.number().min(0).max(1),
   writer_attempts: z.number().int().nonnegative(),
