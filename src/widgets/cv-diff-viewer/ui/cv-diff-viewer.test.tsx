@@ -95,7 +95,9 @@ describe("CvDiffViewer", () => {
     await user.type(textarea, "Texto mejorado")
 
     expect(screen.getAllByText("Modificado").length).toBeGreaterThan(0)
-    expect(screen.getByText(/1 secciones\s+modificadas/)).toBeInTheDocument()
+    expect(
+      screen.getByText(/2 modificadas/)
+    ).toBeInTheDocument()
 
     const stored = JSON.parse(
       window.sessionStorage.getItem("cv-editor-draft") ?? "{}"

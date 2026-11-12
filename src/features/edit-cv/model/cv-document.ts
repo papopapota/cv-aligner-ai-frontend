@@ -6,7 +6,16 @@ export interface CvBlock {
   body: string
 }
 
-const SECTION_LABELS: Array<{ key: keyof TechnicalData; label: string }> = [
+export type CvSectionKey =
+  | "summary"
+  | "technical_skills"
+  | "experience"
+  | "projects"
+  | "education"
+  | "certifications"
+  | "languages"
+
+export const CV_SECTION_DEFINITIONS = [
   { key: "summary", label: "Resumen Profesional" },
   { key: "technical_skills", label: "Habilidades Técnicas" },
   { key: "experience", label: "Experiencia" },
@@ -14,10 +23,10 @@ const SECTION_LABELS: Array<{ key: keyof TechnicalData; label: string }> = [
   { key: "education", label: "Educación" },
   { key: "certifications", label: "Certificaciones" },
   { key: "languages", label: "Idiomas" },
-]
+] as const satisfies ReadonlyArray<{ key: CvSectionKey; label: string }>
 
 const KNOWN_HEADINGS = new Set(
-  SECTION_LABELS.map(({ label }) => normalizeHeading(label))
+  CV_SECTION_DEFINITIONS.map(({ label }) => normalizeHeading(label))
 )
 
 export function normalizeHeading(value: string): string {
@@ -150,7 +159,7 @@ function buildBlocksFromTechnicalData(
 ): CvBlock[] {
   const blocks: CvBlock[] = []
 
-  for (const { key, label } of SECTION_LABELS) {
+  for (const { key, label } of CV_SECTION_DEFINITIONS) {
     const value = technicalData[key]
 
     if (typeof value !== "string" || value.trim().length === 0) {
@@ -188,6 +197,156 @@ export function findMatchingBlock(
   const target = normalizeHeading(heading)
 
   return blocks.find((block) => normalizeHeading(block.heading) === target)
+}
+
+export type CvSectionStatus = "unchanged" | "modified" | "added" | "removed"
+
+export interface CvSectionComparison {
+  key: string
+  heading: string
+  originalBody: string
+  optimizedBody: string
+  status: CvSectionStatus
+}
+
+interface BuildCvSectionComparisonsInput {
+  originalSections?: TechnicalData
+  originalBlocks?: CvBlock[]
+  optimizedSections?: TechnicalData
+  fallbackOptimizedBody?: string
+}
+
+function readSectionValue(
+  sections: TechnicalData | undefined,
+  key: CvSectionKey
+): string {
+  const value = sections?.[key]
+  return typeof value === "string" ? value.trim() : ""
+}
+
+function getSectionStatus(
+  originalBody: string,
+  optimizedBody: string
+): CvSectionStatus {
+  if (originalBody.length === 0) {
+    return "added"
+  }
+
+  if (optimizedBody.length === 0) {
+    return "removed"
+  }
+
+  return originalBody === optimizedBody ? "unchanged" : "modified"
+}
+
+function hasOptimizedSectionContent(
+  sections: TechnicalData | undefined
+): boolean {
+  if (!sections) {
+    return false
+  }
+
+  return CV_SECTION_DEFINITIONS.some(
+    ({ key }) => readSectionValue(sections, key).length > 0
+  )
+}
+
+export function buildCvSectionComparisons({
+  originalSections,
+  originalBlocks = [],
+  optimizedSections,
+  fallbackOptimizedBody,
+}: BuildCvSectionComparisonsInput): CvSectionComparison[] {
+  const fallbackBlocks =
+    !hasOptimizedSectionContent(optimizedSections) && fallbackOptimizedBody
+      ? parseCvBlocks(fallbackOptimizedBody)
+      : []
+  const matchedOriginalBlocks = new Set<string>()
+  const matchedOptimizedBlocks = new Set<string>()
+  const comparisons: CvSectionComparison[] = []
+
+  for (const { key, label } of CV_SECTION_DEFINITIONS) {
+    const originalMatch = findMatchingBlock(originalBlocks, label)
+    const optimizedMatch = findMatchingBlock(fallbackBlocks, label)
+    const originalFromSections = readSectionValue(originalSections, key)
+    const optimizedFromSections = readSectionValue(optimizedSections, key)
+    const originalBody =
+      originalFromSections.length > 0
+        ? originalFromSections
+        : (originalMatch?.body.trim() ?? "")
+    const optimizedBody =
+      optimizedFromSections.length > 0
+        ? optimizedFromSections
+        : (optimizedMatch?.body.trim() ?? "")
+
+    if (originalMatch) {
+      matchedOriginalBlocks.add(originalMatch.id)
+    }
+
+    if (optimizedMatch) {
+      matchedOptimizedBlocks.add(optimizedMatch.id)
+    }
+
+    if (originalBody.length === 0 && optimizedBody.length === 0) {
+      continue
+    }
+
+    comparisons.push({
+      key,
+      heading: label,
+      originalBody,
+      optimizedBody,
+      status: getSectionStatus(originalBody, optimizedBody),
+    })
+  }
+
+  for (const block of fallbackBlocks) {
+    if (matchedOptimizedBlocks.has(block.id)) {
+      continue
+    }
+
+    const originalMatch = findMatchingBlock(originalBlocks, block.heading)
+    const originalBody = originalMatch?.body.trim() ?? ""
+    const optimizedBody = block.body.trim()
+
+    if (originalMatch) {
+      matchedOriginalBlocks.add(originalMatch.id)
+    }
+
+    if (originalBody.length === 0 && optimizedBody.length === 0) {
+      continue
+    }
+
+    comparisons.push({
+      key: block.id,
+      heading: block.heading,
+      originalBody,
+      optimizedBody,
+      status: getSectionStatus(originalBody, optimizedBody),
+    })
+  }
+
+  for (const block of originalBlocks) {
+    if (matchedOriginalBlocks.has(block.id)) {
+      continue
+    }
+
+    const originalBody = block.body.trim()
+
+    if (originalBody.length === 0) {
+      continue
+    }
+
+    comparisons.push({
+      key: `original-${block.id}`,
+      heading: block.heading,
+      originalBody,
+      optimizedBody: "",
+      status: "removed",
+    })
+  }
+
+  return comparisons
 }
 
 export type DiffSegmentType = "equal" | "added" | "removed"

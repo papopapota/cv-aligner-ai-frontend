@@ -26,8 +26,8 @@ function formatVariance(value: number): string {
   return `${Math.round(value * 100)}%`
 }
 
-function formatIc(value: number): string {
-  return value.toFixed(1)
+function formatIc(value: number | null): string {
+  return value === null ? "N/D" : value.toFixed(1)
 }
 
 function formatDimension(value: number): string {

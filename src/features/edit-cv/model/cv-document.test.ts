@@ -2,6 +2,7 @@ import { describe, expect, it } from "@jest/globals"
 
 import type { CvContentResponse } from "@/entities/cv"
 import {
+  buildCvSectionComparisons,
   buildOriginalBlocks,
   countAchievements,
   diffWords,
@@ -91,6 +92,105 @@ describe("buildOriginalBlocks", () => {
 
     expect(blocks[0].heading).toBe("RESUMEN")
     expect(blocks[0].body).toBe("Contenido original")
+  })
+})
+
+describe("buildCvSectionComparisons", () => {
+  it("clasifica secciones sin cambios, modificadas, añadidas y eliminadas", () => {
+    const comparisons = buildCvSectionComparisons({
+      originalSections: {
+        summary: "Resumen original",
+        experience: "Experiencia original",
+        education: "Formación original",
+      },
+      optimizedSections: {
+        summary: "Resumen original",
+        experience: "Experiencia optimizada",
+        projects: "Proyecto nuevo",
+      },
+    })
+
+    expect(
+      comparisons.map((comparison) => [comparison.key, comparison.status])
+    ).toEqual([
+      ["summary", "unchanged"],
+      ["experience", "modified"],
+      ["projects", "added"],
+      ["education", "removed"],
+    ])
+  })
+
+  it("usa optimized_body cuando no hay optimized_sections", () => {
+    const comparisons = buildCvSectionComparisons({
+      originalSections: { summary: "Resumen original" },
+      fallbackOptimizedBody:
+        "## Resumen Profesional\nResumen optimizado\n\n## Experiencia\n- Logro",
+    })
+
+    expect(
+      comparisons.map((comparison) => ({
+        key: comparison.key,
+        status: comparison.status,
+        optimizedBody: comparison.optimizedBody,
+      }))
+    ).toEqual([
+      {
+        key: "summary",
+        status: "modified",
+        optimizedBody: "Resumen optimizado",
+      },
+      {
+        key: "experience",
+        status: "added",
+        optimizedBody: "- Logro",
+      },
+    ])
+  })
+
+  it("incluye secciones originales que no están en el CV optimizado", () => {
+    const comparisons = buildCvSectionComparisons({
+      originalBlocks: [
+        { id: "perfil-0", heading: "Perfil", body: "Perfil original" },
+      ],
+      optimizedSections: { summary: "Resumen nuevo" },
+    })
+
+    expect(comparisons).toContainEqual({
+      key: "original-perfil-0",
+      heading: "Perfil",
+      originalBody: "Perfil original",
+      optimizedBody: "",
+      status: "removed",
+    })
+  })
+
+  it("omite secciones vacías en ambos lados", () => {
+    const comparisons = buildCvSectionComparisons({
+      originalSections: { summary: "", experience: "   " },
+      optimizedSections: { summary: "", projects: "" },
+    })
+
+    expect(comparisons).toEqual([])
+  })
+
+  it("no duplica secciones conocidas presentes en secciones y bloques", () => {
+    const comparisons = buildCvSectionComparisons({
+      originalSections: { summary: "Resumen original" },
+      originalBlocks: [
+        {
+          id: "resumen-profesional-0",
+          heading: "Resumen Profesional",
+          body: "Resumen original",
+        },
+      ],
+      optimizedSections: { summary: "Resumen optimizado" },
+    })
+
+    expect(comparisons).toHaveLength(1)
+    expect(comparisons[0]).toMatchObject({
+      key: "summary",
+      status: "modified",
+    })
   })
 })
 

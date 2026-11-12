@@ -16,8 +16,10 @@ describe("EditableCvBlock", () => {
     render(
       <EditableCvBlock
         block={block}
+        status="unchanged"
         originalText="Texto original"
         value="Texto original"
+        hasLocalEdit={false}
         onChange={() => undefined}
         onRevert={() => undefined}
       />
@@ -40,8 +42,10 @@ describe("EditableCvBlock", () => {
     render(
       <EditableCvBlock
         block={block}
+        status="modified"
         originalText="Texto original"
         value="Texto optimizado"
+        hasLocalEdit
         onChange={() => undefined}
         onRevert={onRevert}
       />
@@ -66,8 +70,10 @@ describe("EditableCvBlock", () => {
     render(
       <EditableCvBlock
         block={block}
+        status="unchanged"
         originalText="Texto original"
         value=""
+        hasLocalEdit
         onChange={onChange}
         onRevert={() => undefined}
       />
@@ -79,5 +85,50 @@ describe("EditableCvBlock", () => {
     )
 
     expect(onChange).toHaveBeenCalled()
+  })
+
+  it("marca una sección añadida", () => {
+    render(
+      <EditableCvBlock
+        block={{ ...block, body: "Contenido nuevo" }}
+        status="added"
+        originalText=""
+        value="Contenido nuevo"
+        hasLocalEdit={false}
+        onChange={() => undefined}
+        onRevert={() => undefined}
+      />
+    )
+
+    expect(screen.getByText("Añadido")).toBeInTheDocument()
+    expect(
+      screen.getByLabelText("Editar Resumen Profesional")
+    ).toHaveValue("Contenido nuevo")
+  })
+
+  it("muestra una sección eliminada en solo lectura", () => {
+    render(
+      <EditableCvBlock
+        block={{ ...block, body: "" }}
+        status="removed"
+        originalText="Texto original"
+        value=""
+        hasLocalEdit={false}
+        onChange={() => undefined}
+        onRevert={() => undefined}
+      />
+    )
+
+    expect(screen.getByText("Eliminado")).toBeInTheDocument()
+    expect(
+      screen.getByText("Esta sección no está en el CV optimizado")
+    ).toBeInTheDocument()
+    expect(screen.getByText("Texto original")).toBeInTheDocument()
+    expect(
+      screen.queryByLabelText("Editar Resumen Profesional")
+    ).not.toBeInTheDocument()
+    expect(
+      screen.getByRole("button", { name: /revertir cambios/i })
+    ).toBeDisabled()
   })
 })
