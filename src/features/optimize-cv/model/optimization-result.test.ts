@@ -77,6 +77,24 @@ describe("cvOptimizationResultSchema", () => {
     expect(parsed.data?.optimized_per_dimension).toEqual({ soft_skills: 0.6 })
   })
 
+  it("acepta los campos del editor de CV", () => {
+    const parsed = cvOptimizationResultSchema.safeParse({
+      ...createPayload(),
+      cv_id: "11111111-1111-4111-8111-111111111111",
+      optimized_body: "Resumen Profesional\n\nContenido optimizado",
+      personal_info: {
+        full_name: "Ada Lovelace",
+        location: { city: "Londres", country: "Reino Unido" },
+      },
+    })
+
+    expect(parsed.success).toBe(true)
+    expect(parsed.data?.optimized_body).toBe(
+      "Resumen Profesional\n\nContenido optimizado"
+    )
+    expect(parsed.data?.personal_info?.full_name).toBe("Ada Lovelace")
+  })
+
   it("rechaza scores fuera del rango 0..1", () => {
     const parsed = cvOptimizationResultSchema.safeParse({
       ...createPayload(),

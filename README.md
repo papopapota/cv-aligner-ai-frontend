@@ -13,9 +13,9 @@ La base actual contiene el bootstrap de Next.js, Tailwind CSS v4 y componentes d
 | Next.js App Router, TypeScript y Tailwind CSS v4 | Implementado |
 | Componentes shadcn/ui (Base UI + Lucide) | Implementado en `src/shared/ui/` |
 | Capas FSD (`views`, `widgets`, `features`, `entities`, `shared`) | Implementado |
-| Integración con la API REST | Implementada para `/applications`; el resto del flujo sigue mockeado |
+| Integración con la API REST | Implementada sobre `/api/v1`: autenticación, postulaciones y flujo de CV |
 | Jest + React Testing Library | Configurado (`jest.config.ts` + `jest.setup.tsx`) |
-| Variable `NEXT_PUBLIC_API_URL` | Implementada en `src/shared/api/query-client.ts` |
+| Variable `NEXT_PUBLIC_BACKEND_URL` | Implementada en `src/shared/api/http.ts` |
 
 ## Inicio rápido
 
@@ -43,8 +43,9 @@ Versiones verificadas en el entorno de desarrollo actual.
 | [TanStack Query](https://tanstack.com/query) | `5.105.0` | Gestión de estado del servidor |
 | [Zod](https://zod.dev/) | `4.6.7` | Validación de esquemas y contratos |
 | [React Dropzone](https://react-dropzone.js.org/) | `20.1.4` | Carga de archivos PDF/DOCX |
+| [jsPDF](https://github.com/parallax/jsPDF) | `4.2.1` | Exportación del CV optimizado a PDF en el cliente |
 | [ESLint](https://eslint.org/) | `9.39.5` | Linting con `eslint-config-next` |
-| Jest + React Testing Library | Pendiente | Pruebas unitarias y de componentes |
+| Jest + React Testing Library | `30.5.2` / `16.3.3` | Pruebas unitarias y de componentes |
 
 > **Nota sobre shadcn/ui:** este proyecto usa la variante `base-nova` de shadcn con primitivas de **Base UI**, no Radix UI. La utilidad `cn()` se importa desde el paquete `cn` (construido sobre `clsx` y `tailwind-merge`) y hoy se re-exporta en `src/lib/utils.ts`.
 
@@ -116,8 +117,8 @@ import { UploadCvForm } from "@/features/upload-cv/ui/upload-cv-form";
 
 | Capa | Slices |
 | --- | --- |
-| `views/` | `login`, `dashboard`, `cv-optimization`, `applications` |
-| `widgets/` | `cv-diff-viewer`, `ats-score-dashboard`, `applications-table` |
+| `views/` | `auth`, `document-upload`, `cv-optimization`, `cv-editor`, `applications` |
+| `widgets/` | `upload-panel`, `optimization-result`, `cv-diff-viewer`, `ats-score-dashboard`, `applications-table` |
 | `features/` | `auth-by-email`, `upload-cv`, `upload-job-text`, `extract-job-url`, `edit-cv`, `create-application`, `update-application-status`, `delete-application` |
 | `entities/` | `cv`, `job-vacancy`, `application`, `user` |
 | `shared/` | `ui`, `api`, `hooks`, `lib`, `types` |
@@ -166,7 +167,7 @@ Crea un archivo `.env` en la raíz del repositorio:
 NEXT_PUBLIC_BACKEND_URL=http://127.0.0.1:8000
 ```
 
-El cliente centraliza la URL base en `src/shared/api/http.ts` y la usa para `/auth/*` y `/cv/optimize`.
+El cliente centraliza el origen y el prefijo en `src/shared/api/http.ts` (`API_ORIGIN` + `API_PREFIX = "/api/v1"`). Todas las rutas relativas se resuelven contra `http://127.0.0.1:8000/api/v1` por defecto. Para añadir un endpoint usa rutas relativas (`/cvs`, `/applications`); no incluyas `/api/v1` en cada llamada.
 
 Los archivos `.env*` están ignorados por Git. No incluyas secretos en variables con prefijo `NEXT_PUBLIC_`, ya que su valor se incorpora al bundle del navegador.
 
@@ -186,6 +187,19 @@ El cliente HTTP vive en `src/shared/api/query-client.ts` y expone `useApiQuery`,
 La ruta `/applications` compone `views/applications` → `widgets/applications-table`, que muestra la tabla de postulaciones con filtros por puesto, empresa, estado y fecha, paginación, y las acciones de crear, ver, cambiar estado y eliminar. Incluye estados de carga, sesión no iniciada (`401`), lista vacía y errores de mutación.
 
 Los estados válidos son `pending`, `under-review`, `accepted` y `rejected`. Un estado desconocido en la respuesta se normaliza a `pending` para no romper la tabla.
+
+### Flujo de CV y editor
+
+El flujo de optimización es asíncrono:
+
+| Paso | Endpoint | Uso |
+| --- | --- | --- |
+| Subida | `POST /cvs` (multipart `cv_file`) | Devuelve `202` con el `id` y `action_required`. |
+| Parseo | `GET /cvs/{id}` | Polling hasta `status = PARSED` (o error / `REUPLOAD_CV`). |
+| Optimización | `POST /cvs/{id}/optimize` (`{ "job_description": "..." }`) | Devuelve `optimized_content`, `optimized_body`, `personal_info` y las métricas ATS. |
+| Contenido original | `GET /cvs/{id}/content?include_structured=true` | Alimenta el panel de solo lectura del editor. |
+
+La ruta `/analysis` muestra las métricas y enlaza a `/analysis/editor`. La vista `views/cv-editor` compone `widgets/cv-diff-viewer`, que usa la feature `edit-cv` para parsear secciones, comparar con el CV original, guardar borradores en `sessionStorage` y exportar el resultado a PDF con `jsPDF` (import dinámico en el cliente).
 
 ## Scripts disponibles
 

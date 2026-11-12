@@ -2,30 +2,28 @@
 
 import { useMutation } from "@tanstack/react-query"
 
-import { postFormData } from "@/shared/api"
+import { postJson } from "@/shared/api"
 import {
   cvOptimizationResultSchema,
   type CvOptimizationResult,
 } from "../model"
 
 export interface OptimizeCvInput {
-  cvFile: File
-  jobDescriptionFile: File
+  cvId: string
+  jobDescription: string
 }
 
 export async function optimizeCv({
-  cvFile,
-  jobDescriptionFile,
+  cvId,
+  jobDescription,
 }: OptimizeCvInput): Promise<CvOptimizationResult> {
-  const formData = new FormData()
-  formData.append("cv_file", cvFile)
-  formData.append("job_description_file", jobDescriptionFile)
-
-  return postFormData({
-    url: "/cv/optimize",
-    formData,
+  const result = await postJson({
+    url: `/cvs/${cvId}/optimize`,
+    body: { job_description: jobDescription },
     schema: cvOptimizationResultSchema,
   })
+
+  return { ...result, cv_id: result.cv_id ?? cvId }
 }
 
 export function useOptimizeCv() {

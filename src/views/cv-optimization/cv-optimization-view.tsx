@@ -25,9 +25,9 @@ export function CvOptimizationView() {
         >
           Volver a carga
         </Link>
-        <p className="text-sm text-muted-foreground">
-          El editor de CV estará disponible en la siguiente fase.
-        </p>
+        <Link href="/analysis/editor" className={buttonVariants()}>
+          Editar CV
+        </Link>
       </div>
     </div>
   )
