@@ -63,7 +63,10 @@ export function buildUrl(url: string, params?: QueryParams): string {
   }
 
   const query = search.toString();
-  return `${API_URL}${url}${query ? `?${query}` : ""}`;
+  const base = url.startsWith("http://") || url.startsWith("https://")
+    ? url
+    : `${API_URL}${url.startsWith("/") ? "" : "/"}${url}`;
+  return `${base}${query ? `?${query}` : ""}`;
 }
 
 function isRecord(value: unknown): value is Record<string, unknown> {
