@@ -1,7 +1,8 @@
 "use client"
 
+import Link from "next/link"
 import { useMemo, useState } from "react"
-import { Search } from "lucide-react"
+import { BarChart3, Search } from "lucide-react"
 
 import {
   applicationStatusLabels,
@@ -24,6 +25,7 @@ import {
   TableHead,
   TableHeader,
   TableRow,
+  buttonVariants,
 } from "@/shared/ui"
 
 import {
@@ -79,7 +81,18 @@ export function ApplicationsTable() {
         title="Control de Postulaciones"
         description="Registra tus candidaturas y actualiza el estado de cada proceso."
         descriptionClassName="text-ink"
-        actions={<CreateApplicationDialog />}
+        actions={
+          <div className="flex flex-wrap items-center gap-2">
+            <Link
+              href="/stats"
+              className={buttonVariants({ variant: "outline" })}
+            >
+              <BarChart3 aria-hidden="true" className="size-4" />
+              Estadísticas
+            </Link>
+            <CreateApplicationDialog />
+          </div>
+        }
       />
 
       <div className="flex flex-col gap-4 border border-line bg-canvas p-4 sm:flex-row sm:items-center">
