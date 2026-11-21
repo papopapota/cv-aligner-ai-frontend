@@ -213,19 +213,16 @@ La ruta `/analysis` muestra las métricas y enlaza a `/analysis/editor`. La vist
 | `pnpm test` | Ejecuta la suite de pruebas una vez. | Disponible |
 | `pnpm test:watch` | Ejecuta las pruebas en modo watch. | Disponible |
 | `pnpm test:coverage` | Ejecuta las pruebas con reporte de cobertura. | No configurado |
-
-Mientras no exista un script dedicado de type-check, se puede validar TypeScript con:
-
-```bash
-pnpm exec tsc --noEmit
-```
+| `pnpm typecheck` | Valida TypeScript sin emitir archivos. | Disponible |
 
 ## Puesta en marcha
 
 ### Requisitos
 
-- Node.js 22 (verificado con `22.22.2`).
-- pnpm `11.15.1` (definido en `packageManager`).
+- Node.js `24.22.3` (Maintenance LTS, fijado en `.nvmrc` y en `engines.node`).
+- pnpm `11.15.1` (definido en `packageManager` y `engines.pnpm`).
+
+Si usas nvm, ejecuta `nvm use` en la raíz del proyecto para seleccionar la versión de `.nvmrc`.
 
 ### Instalación y ejecución
 
@@ -244,9 +241,16 @@ Para conectar el frontend con el backend, crea `.env` con `NEXT_PUBLIC_BACKEND_U
 
 ```bash
 pnpm lint
-pnpm exec tsc --noEmit
+pnpm test
 pnpm build
+pnpm typecheck
 ```
+
+`pnpm typecheck` se ejecuta después de `pnpm build` porque Next.js genera `next-env.d.ts` y `.next/types/**` durante el build.
+
+## Integración continua
+
+El workflow `.github/workflows/ci.yml` ejecuta en GitHub Actions, para pushes y pull requests a `main`, los mismos pasos de verificación: instalación con `pnpm install --frozen-lockfile`, `pnpm lint`, `pnpm test --ci`, `pnpm build` y `pnpm typecheck`. La versión de Node se toma de `.nvmrc`; no se necesitan secretos porque el build usa un valor por defecto para `NEXT_PUBLIC_BACKEND_URL`.
 
 ## Convenciones de contribución
 
