@@ -1,3 +1,24 @@
+jest.mock("jspdf", () => {
+  const doc = {
+    internal: {
+      pageSize: { getWidth: () => 612, getHeight: () => 792 },
+    },
+    setFont: jest.fn(),
+    setFontSize: jest.fn(),
+    setTextColor: jest.fn(),
+    setDrawColor: jest.fn(),
+    setLineWidth: jest.fn(),
+    splitTextToSize: jest.fn((value: string) => [value]),
+    getTextWidth: jest.fn((value: string) => value.length * 5),
+    text: jest.fn(),
+    line: jest.fn(),
+    addPage: jest.fn(),
+    save: jest.fn(),
+  }
+
+  return { jsPDF: jest.fn(() => doc), __doc: doc }
+})
+
 const fetchMock = globalThis.fetch as unknown as jest.MockedFunction<typeof fetch>
 
 import React from "react"
@@ -8,6 +29,13 @@ import { beforeEach, describe, expect, jest } from "@jest/globals"
 
 import { saveOptimizationResult } from "@/features/optimize-cv"
 import { CvDiffViewer } from "./cv-diff-viewer"
+
+const { __doc: mockJsDoc } = jest.requireMock<{
+  __doc: {
+    text: jest.Mock<(...args: unknown[]) => unknown>
+    save: jest.Mock<(filename: string) => unknown>
+  }
+}>("jspdf")
 
 const CV_ID = "11111111-1111-4111-8111-111111111111"
 
@@ -65,6 +93,7 @@ function mockJsonResponse(payload: unknown): Response {
 
 describe("CvDiffViewer", () => {
   beforeEach(() => {
+    jest.clearAllMocks()
     fetchMock.mockReset()
     window.sessionStorage.clear()
   })
@@ -125,5 +154,29 @@ describe("CvDiffViewer", () => {
     expect(
       screen.getByLabelText("Editar Resumen Profesional")
     ).toHaveValue("Texto optimizado")
+  })
+
+  it("exporta el CV optimizado al pulsar Exportar PDF", async () => {
+    const user = userEvent.setup()
+    saveOptimizationResult(createOptimizationResult())
+    fetchMock.mockResolvedValue(mockJsonResponse(createContentPayload()))
+
+    renderViewer()
+
+    await waitFor(() => {
+      expect(screen.getByText("Texto original")).toBeInTheDocument()
+    })
+
+    await user.click(screen.getByRole("button", { name: /exportar pdf/i }))
+
+    await waitFor(() => {
+      expect(mockJsDoc.save).toHaveBeenCalledWith("cv-optimizado.pdf")
+    })
+
+    const texts = mockJsDoc.text.mock.calls.map((call) => call[0])
+
+    expect(texts).toContain("RESUMEN PROFESIONAL")
+    expect(texts).toContain("EXPERIENCIA")
+    expect(texts).toContain("Texto optimizado")
   })
 })
