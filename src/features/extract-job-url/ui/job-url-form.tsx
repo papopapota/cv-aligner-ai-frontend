@@ -15,7 +15,11 @@ import {
   Spinner,
 } from "@/shared/ui"
 import { extractJobUrl } from "../api"
-import { jobUrlSchema, type JobUrlFormData } from "../model"
+import {
+  createVacancyFromUrl,
+  jobUrlSchema,
+  type JobUrlFormData,
+} from "../model"
 
 export function JobUrlForm({
   onExtracted,
@@ -36,8 +40,8 @@ export function JobUrlForm({
     setSubmitError(null)
 
     try {
-      const vacancy = await extractJobUrl(values.url)
-      onExtracted(vacancy)
+      const content = await extractJobUrl(values.url)
+      onExtracted(createVacancyFromUrl(values.url, content))
     } catch (error) {
       setSubmitError(
         error instanceof Error

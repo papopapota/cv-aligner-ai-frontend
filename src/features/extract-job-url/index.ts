@@ -1,4 +1,8 @@
 export { extractJobUrl } from "./api"
-export { jobUrlSchema } from "./model"
-export type { JobUrlFormData } from "./model"
+export {
+  createVacancyFromUrl,
+  jobDescriptionSchema,
+  jobUrlSchema,
+} from "./model"
+export type { JobDescriptionResponse, JobUrlFormData } from "./model"
 export { JobUrlForm } from "./ui/job-url-form"

@@ -1,14 +1,11 @@
-import { sampleJobVacancy, type JobVacancy } from "@/entities/job-vacancy"
+import { postJson } from "@/shared/api"
 
-const MOCK_DELAY_MS = 650
+import { jobDescriptionSchema, type JobDescriptionResponse } from "../model"
 
-export async function extractJobUrl(url: string): Promise<JobVacancy> {
-  await new Promise((resolve) => setTimeout(resolve, MOCK_DELAY_MS))
-
-  return {
-    ...sampleJobVacancy,
-    id: `job-${Date.now()}`,
-    source: "url",
-    url,
-  }
+export async function extractJobUrl(url: string): Promise<JobDescriptionResponse> {
+  return postJson({
+    url: "/job-descriptions/extract",
+    body: { url },
+    schema: jobDescriptionSchema,
+  })
 }

@@ -1,2 +1,5 @@
+export { jobDescriptionSchema } from "./job-description-schema"
+export type { JobDescriptionResponse } from "./job-description-schema"
+export { createVacancyFromUrl } from "./create-vacancy-from-url"
 export { jobUrlSchema } from "./url-schema"
 export type { JobUrlFormData } from "./url-schema"
