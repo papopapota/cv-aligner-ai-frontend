@@ -152,15 +152,9 @@ Nombres esperados:
 
 ### Estado actual del tooling
 
-Jest, React Testing Library, `jest-environment-jsdom` y los scripts `test:*` aún no están instalados. No afirmes que `pnpm test` funciona hasta que el tooling esté configurado.
+Jest, React Testing Library, `jest-environment-jsdom` y los scripts `test:*` están instalados y configurados en `jest.config.ts` y `jest.setup.tsx`. La suite se ejecuta con `pnpm test`.
 
-La configuración objetivo usa `next/jest` y las siguientes dependencias de desarrollo:
-
-```bash
-pnpm add -D jest jest-environment-jsdom @testing-library/react @testing-library/dom @testing-library/jest-dom @testing-library/user-event ts-node @types/jest
-```
-
-Mientras el tooling no exista, todo slice nuevo debe incluir sus tests escritos y, si no es posible ejecutarlos, dejar constancia explícita del bloqueo. Un slice no se considera terminado sin pruebas.
+Todo slice nuevo debe incluir sus tests co-localizados. Un slice no se considera terminado sin pruebas.
 
 ## Convenciones de código y estado
 
