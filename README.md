@@ -194,6 +194,7 @@ El flujo de optimización es asíncrono:
 
 | Paso | Endpoint | Uso |
 | --- | --- | --- |
+| Extracción por URL | `POST /job-descriptions/extract` (`{ "url": "..." }`) | Devuelve `{ "title": "..." \| null, "company": "..." \| null, "description": "..." }`; el título y la empresa de la web se usan como encabezado/subtítulo de la tarjeta, con fallback a la primera línea y al hostname. |
 | Subida | `POST /cvs` (multipart `cv_file`) | Devuelve `202` con el `id` y `action_required`. |
 | Parseo | `GET /cvs/{id}` | Polling hasta `status = PARSED` (o error / `REUPLOAD_CV`). |
 | Optimización | `POST /cvs/{id}/optimize` (`{ "job_description": "..." }`) | Devuelve `optimized_content`, `optimized_body`, `personal_info` y las métricas ATS. |
